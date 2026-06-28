@@ -1,3 +1,13 @@
+# JS / Node
+node_modules/
+dist/
+.env.local
+*.local
+
+# Supabase
+supabase/.branches
+supabase/.temp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
