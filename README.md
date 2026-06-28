@@ -1,0 +1,2 @@
+# TrucoMineiro
+Truco Mineiro 
