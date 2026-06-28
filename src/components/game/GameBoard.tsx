@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useGameActions } from '@/hooks/useGameActions';
 import { canCallTruco } from '@/engine/betting';
-import { ScoreBar } from './ScoreBar';
-import { RoundIndicator } from './RoundIndicator';
+import { Sidebar } from './Sidebar';
 import { PlayedCards } from './PlayedCards';
 import { PlayerHand } from './PlayerHand';
 import { OpponentHand } from './OpponentHand';
@@ -31,6 +30,7 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
   const isBetting = hand?.phase === 'betting';
   const isHandOver = hand?.phase === 'handOver';
   const isMatchOver = publicState?.phase === 'finished' || hand?.phase === 'matchOver';
+  const canCallBet = Boolean(mySeat && bet && canCallTruco(bet, mySeat) && hand?.phase === 'playing');
 
   const opponentSeat: Seat = mySeat === 'player1' ? 'player2' : 'player1';
   const opponentCardCount = publicState?.players[opponentSeat]?.cardCount ?? 0;
@@ -54,7 +54,6 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
     }
   }
 
-  // Auto-dismiss hand-over after 2 seconds
   useEffect(() => {
     if (isHandOver && !isMatchOver) {
       const t = setTimeout(() => {
@@ -62,12 +61,13 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
       }, 2200);
       return () => clearTimeout(t);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHandOver, isMatchOver]);
 
   if (!publicState) {
     return (
       <div style={centerStyle}>
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px' }}>Carregando...</p>
+        <p style={{ color: 'var(--color-muted)', fontSize: '14px' }}>Carregando...</p>
       </div>
     );
   }
@@ -75,18 +75,15 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
   if (publicState.phase === 'waiting') {
     return (
       <div style={centerStyle}>
-        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)' }}>
+        <p style={{ fontSize: '14px', color: 'var(--color-muted)' }}>
           Aguardando oponente...
         </p>
       </div>
     );
   }
 
-  const canCallBet = mySeat && bet && canCallTruco(bet, mySeat) && hand?.phase === 'playing';
-
   return (
     <div style={boardStyle}>
-      {/* Reconnecting banner */}
       <AnimatePresence>
         {!isConnected && (
           <motion.div
@@ -100,51 +97,39 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
         )}
       </AnimatePresence>
 
-      {/* Score */}
-      <div style={{ padding: '16px 0 8px' }}>
-        <ScoreBar scores={publicState.score} mySeat={mySeat} />
-      </div>
+      {/* Main play area */}
+      <div style={mainAreaStyle}>
+        {/* Opponent hand */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '28px' }}>
+          <OpponentHand cardCount={opponentCardCount} />
+        </div>
 
-      {/* Opponent hand */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '24px' }}>
-        <OpponentHand cardCount={opponentCardCount} />
-      </div>
+        {/* Played cards center */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {hand && <PlayedCards trick={hand.currentTrick} mySeat={mySeat} />}
+        </div>
 
-      {/* Center: round indicator + played cards */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-        {hand && (
-          <RoundIndicator
-            tricks={hand.tricks}
-            currentRound={(hand.tricks.length + 1) as 1 | 2 | 3}
-            mySeat={mySeat}
+        {/* Player hand */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '36px' }}>
+          <PlayerHand
+            hand={myHand}
+            isMyTurn={isMyTurn}
+            onPlayCard={(cardId) => doAction(() => actions.playCard(cardId))}
           />
-        )}
-        {hand && <PlayedCards trick={hand.currentTrick} mySeat={mySeat} />}
+        </div>
       </div>
 
-      {/* Actions row */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', padding: '12px 0' }}>
-        {canCallBet && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => doAction(() => actions.callTruco())}
-            disabled={actionPending}
-            style={{ fontSize: '13px', padding: '8px 16px' }}
-          >
-            Truco!
-          </Button>
-        )}
-      </div>
-
-      {/* Player hand */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '40px' }}>
-        <PlayerHand
-          hand={myHand}
-          isMyTurn={isMyTurn}
-          onPlayCard={(cardId) => doAction(() => actions.playCard(cardId))}
-        />
-      </div>
+      {/* Sidebar */}
+      <Sidebar
+        scores={publicState.score}
+        mySeat={mySeat}
+        currentTurn={hand?.currentTurn ?? null}
+        tricks={hand?.tricks ?? []}
+        currentRound={hand ? ((hand.tricks.length + 1) as 1 | 2 | 3) : 1}
+        canCallTruco={canCallBet}
+        onCallTruco={() => doAction(() => actions.callTruco())}
+        actionPending={actionPending}
+      />
 
       {/* Betting overlay */}
       {isBetting && bet && (
@@ -157,7 +142,7 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
         />
       )}
 
-      {/* Hand over result */}
+      {/* Hand result overlay */}
       <AnimatePresence>
         {isHandOver && !isMatchOver && hand && (
           <motion.div
@@ -166,14 +151,14 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
             exit={{ opacity: 0, scale: 0.9 }}
             style={resultOverlayStyle}
           >
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>
               {hand.winner === mySeat
                 ? 'Você ganhou a mão!'
                 : hand.winner
                 ? 'Oponente ganhou a mão'
                 : 'Empate'}
             </p>
-            <p style={{ fontSize: '26px', fontWeight: 700, marginTop: '4px' }}>
+            <p style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px' }}>
               +{hand.pointsAtStake} pts
             </p>
           </motion.div>
@@ -183,13 +168,13 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
       {/* Match over */}
       <Modal open={isMatchOver}>
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)' }}>Fim de jogo</p>
-          <p style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em' }}>
+          <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Fim de jogo</p>
+          <p style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em' }}>
             {publicState.score.player1 >= 12
-              ? mySeat === 'player1' ? '🏆 Você ganhou!' : 'Oponente ganhou'
-              : mySeat === 'player2' ? '🏆 Você ganhou!' : 'Oponente ganhou'}
+              ? mySeat === 'player1' ? 'Você ganhou!' : 'Oponente ganhou'
+              : mySeat === 'player2' ? 'Você ganhou!' : 'Oponente ganhou'}
           </p>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>
+          <p style={{ fontSize: '14px', color: 'var(--color-muted)' }}>
             {publicState.score.player1} × {publicState.score.player2}
           </p>
           <Button onClick={() => window.location.reload()}>Jogar de novo</Button>
@@ -205,12 +190,20 @@ const boardStyle: React.CSSProperties = {
   width: '100%',
   height: '100%',
   display: 'flex',
-  flexDirection: 'column',
+  flexDirection: 'row',
   background: 'var(--color-table)',
   position: 'relative',
   overflow: 'hidden',
   maxWidth: '480px',
   margin: '0 auto',
+};
+
+const mainAreaStyle: React.CSSProperties = {
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+  overflow: 'hidden',
 };
 
 const centerStyle: React.CSSProperties = {
@@ -223,15 +216,16 @@ const centerStyle: React.CSSProperties = {
 
 const reconnectingStyle: React.CSSProperties = {
   position: 'absolute',
-  top: '8px',
+  top: '10px',
   left: '50%',
   transform: 'translateX(-50%)',
   fontSize: '12px',
   color: 'rgba(255,255,255,0.5)',
-  background: 'rgba(0,0,0,0.6)',
+  background: 'rgba(0,0,0,0.65)',
   borderRadius: '100px',
-  padding: '4px 12px',
+  padding: '4px 14px',
   zIndex: 50,
+  whiteSpace: 'nowrap',
 };
 
 const resultOverlayStyle: React.CSSProperties = {
@@ -239,12 +233,13 @@ const resultOverlayStyle: React.CSSProperties = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  background: 'rgba(0,0,0,0.7)',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-  borderRadius: '16px',
-  padding: '20px 28px',
+  background: 'rgba(8,14,26,0.82)',
+  backdropFilter: 'blur(14px)',
+  WebkitBackdropFilter: 'blur(14px)',
+  borderRadius: '18px',
+  padding: '22px 32px',
   textAlign: 'center',
   pointerEvents: 'none',
   zIndex: 20,
+  border: '1px solid rgba(255,255,255,0.07)',
 };

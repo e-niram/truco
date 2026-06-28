@@ -12,7 +12,7 @@ export function GamePage() {
   const { token } = usePlayerIdentity();
   const navigate = useNavigate();
 
-  const { mySeat, setPublicState, setMySeat, setMyHand } = useGameStore();
+  const { mySeat, publicState, myHand, setPublicState, setMySeat, setMyHand } = useGameStore();
   const actions = useGameActions(gameId, token, mySeat);
   const joinedRef = useRef(false);
 
@@ -74,6 +74,15 @@ export function GamePage() {
 
   // Subscribe to realtime channels
   useRealtimeGame(gameId, mySeat, token);
+
+  // If game is active but we have no hand (missed initial broadcast), request re-delivery.
+  // RECONNECT triggers the server to broadcast hands again.
+  useEffect(() => {
+    if (publicState?.phase !== 'active' || !mySeat || myHand.length > 0) return;
+    void actions.reconnect().catch(() => {});
+  // Only re-run when phase changes to active or seat is assigned — not on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicState?.phase, mySeat]);
 
   if (!gameId) {
     return null;

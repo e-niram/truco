@@ -30,30 +30,34 @@ const base: React.CSSProperties = {
   justifyContent: 'center',
   gap: '8px',
   borderRadius: '10px',
-  fontWeight: 500,
+  fontWeight: 600,
   letterSpacing: '-0.01em',
   transition: 'all 150ms ease',
   cursor: 'pointer',
+  width: '100%',
 };
 
 const styles: Record<string, React.CSSProperties> = {
   primary: {
     ...base,
-    background: '#ffffff',
-    color: '#000000',
-    padding: '12px 24px',
+    background: 'var(--color-accent)',
+    color: '#ffffff',
+    padding: '13px 24px',
+    fontSize: '15px',
   },
   ghost: {
     ...base,
     background: 'transparent',
     color: '#ffffff',
-    border: '1px solid rgba(255,255,255,0.2)',
-    padding: '12px 24px',
+    border: '1px solid rgba(255,255,255,0.18)',
+    padding: '13px 24px',
+    fontSize: '15px',
   },
   danger: {
     ...base,
-    background: '#e53e3e',
+    background: 'var(--color-danger)',
     color: '#ffffff',
-    padding: '12px 24px',
+    padding: '13px 24px',
+    fontSize: '15px',
   },
 };

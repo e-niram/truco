@@ -7,7 +7,7 @@ interface CardFaceProps {
 
 export function CardFace({ card }: CardFaceProps) {
   const symbol = SUIT_SYMBOL[card.suit];
-  const color = SUIT_COLOR[card.suit];
+  const color = card.isManilha ? '#d4a017' : SUIT_COLOR[card.suit];
 
   return (
     <div
@@ -15,65 +15,51 @@ export function CardFace({ card }: CardFaceProps) {
         width: '100%',
         height: '100%',
         background: card.isManilha
-          ? 'linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%)'
-          : '#f8f8f6',
+          ? 'linear-gradient(145deg, #1c1a2e 0%, #0e0c1e 100%)'
+          : '#f7f5f0',
         borderRadius: 'var(--card-radius)',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
-        padding: '6px 8px',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '2px',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Manilha glow ring */}
       {card.isManilha && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
             borderRadius: 'var(--card-radius)',
-            border: '1.5px solid rgba(255,215,0,0.5)',
+            border: '1.5px solid rgba(212,160,23,0.55)',
             pointerEvents: 'none',
           }}
         />
       )}
 
-      {/* Top-left rank + suit */}
-      <div style={{ lineHeight: 1, textAlign: 'left' }}>
-        <div style={{ fontSize: '14px', fontWeight: 700, color: card.isManilha ? '#ffd700' : color }}>
-          {card.rank}
-        </div>
-        <div style={{ fontSize: '11px', marginTop: '1px', color: card.isManilha ? '#ffd700' : color }}>{symbol}</div>
-      </div>
-
-      {/* Center symbol */}
       <div
         style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          fontSize: '26px',
-          color: card.isManilha ? 'rgba(255,215,0,0.8)' : color,
-          opacity: 0.9,
+          fontSize: '34px',
+          fontWeight: 800,
+          lineHeight: 1,
+          color,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {card.rank}
+      </div>
+
+      <div
+        style={{
+          fontSize: '22px',
+          lineHeight: 1,
+          color,
+          opacity: card.isManilha ? 0.9 : 0.85,
         }}
       >
         {symbol}
-      </div>
-
-      {/* Bottom-right rank + suit (rotated) */}
-      <div
-        style={{
-          lineHeight: 1,
-          textAlign: 'right',
-          transform: 'rotate(180deg)',
-        }}
-      >
-        <div style={{ fontSize: '14px', fontWeight: 700, color: card.isManilha ? '#ffd700' : color }}>
-          {card.rank}
-        </div>
-        <div style={{ fontSize: '11px', marginTop: '1px', color: card.isManilha ? '#ffd700' : color }}>{symbol}</div>
       </div>
     </div>
   );

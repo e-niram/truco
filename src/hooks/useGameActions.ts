@@ -94,7 +94,15 @@ export function useGameActions(gameId: string | undefined, token: string, mySeat
     [dispatch],
   );
 
-  return { joinGame, playCard, callTruco, raiseBet, acceptBet, rejectBet, startNextHand };
+  const reconnect = useCallback(
+    () => {
+      if (!mySeat) return Promise.reject(new Error('No seat'));
+      return dispatch({ type: 'RECONNECT', seat: mySeat, token });
+    },
+    [dispatch, mySeat, token],
+  );
+
+  return { joinGame, playCard, callTruco, raiseBet, acceptBet, rejectBet, startNextHand, reconnect };
 }
 
 // Utility: create a new game via the create-game Edge Function
