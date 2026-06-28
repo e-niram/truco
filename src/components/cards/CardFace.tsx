@@ -40,11 +40,11 @@ export function CardFace({ card }: CardFaceProps) {
       )}
 
       {/* Top-left rank + suit */}
-      <div style={{ color, lineHeight: 1, textAlign: 'left' }}>
+      <div style={{ lineHeight: 1, textAlign: 'left' }}>
         <div style={{ fontSize: '14px', fontWeight: 700, color: card.isManilha ? '#ffd700' : color }}>
           {card.rank}
         </div>
-        <div style={{ fontSize: '11px', marginTop: '1px' }}>{symbol}</div>
+        <div style={{ fontSize: '11px', marginTop: '1px', color: card.isManilha ? '#ffd700' : color }}>{symbol}</div>
       </div>
 
       {/* Center symbol */}
@@ -65,7 +65,6 @@ export function CardFace({ card }: CardFaceProps) {
       {/* Bottom-right rank + suit (rotated) */}
       <div
         style={{
-          color,
           lineHeight: 1,
           textAlign: 'right',
           transform: 'rotate(180deg)',
@@ -74,7 +73,7 @@ export function CardFace({ card }: CardFaceProps) {
         <div style={{ fontSize: '14px', fontWeight: 700, color: card.isManilha ? '#ffd700' : color }}>
           {card.rank}
         </div>
-        <div style={{ fontSize: '11px', marginTop: '1px' }}>{symbol}</div>
+        <div style={{ fontSize: '11px', marginTop: '1px', color: card.isManilha ? '#ffd700' : color }}>{symbol}</div>
       </div>
     </div>
   );

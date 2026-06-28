@@ -12,7 +12,7 @@ export function GamePage() {
   const { token } = usePlayerIdentity();
   const navigate = useNavigate();
 
-  const { mySeat, setPublicState, setMySeat } = useGameStore();
+  const { mySeat, setPublicState, setMySeat, setMyHand } = useGameStore();
   const actions = useGameActions(gameId, token, mySeat);
   const joinedRef = useRef(false);
 
@@ -37,9 +37,13 @@ export function GamePage() {
       if (pub.phase === 'waiting' && pub.players.player2 === null && !joinedRef.current) {
         joinedRef.current = true;
         try {
-          await actions.joinGame();
-          // After joining, our seat will be resolved by the hand delivery
+          const result = await actions.joinGame();
           setMySeat('player2');
+          // Hand is returned in the response to avoid the broadcast race condition
+          const hand = (result as { hand?: unknown }).hand;
+          if (Array.isArray(hand) && hand.length > 0) {
+            setMyHand(hand as import('@/engine/types').Card[]);
+          }
         } catch {
           // If join fails, we might already be player1
           setMySeat('player1');

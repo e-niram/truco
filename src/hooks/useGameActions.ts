@@ -1,10 +1,14 @@
 import { useCallback } from 'react';
 import { supabase, FUNCTIONS_URL } from '@/lib/supabase';
-import type { GameAction, Seat } from '@/engine/types';
+import type { GameAction, Card, Seat } from '@/engine/types';
 
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
-async function postAction(gameId: string, token: string, action: GameAction): Promise<void> {
+async function postAction(
+  gameId: string,
+  token: string,
+  action: GameAction,
+): Promise<Record<string, unknown>> {
   const res = await fetch(`${FUNCTIONS_URL}/action`, {
     method: 'POST',
     headers: {
@@ -19,7 +23,7 @@ async function postAction(gameId: string, token: string, action: GameAction): Pr
     throw new Error(body.error ?? `HTTP ${res.status}`);
   }
 
-  const result = await res.json() as { ok: boolean; error?: string; retry?: boolean };
+  const result = await res.json() as { ok: boolean; error?: string; retry?: boolean; hand?: Card[] };
   if (!result.ok) {
     if (result.retry) {
       // Conflict — retry once after a short delay
@@ -28,6 +32,7 @@ async function postAction(gameId: string, token: string, action: GameAction): Pr
     }
     throw new Error(result.error ?? 'Action failed');
   }
+  return result as Record<string, unknown>;
 }
 
 export function useGameActions(gameId: string | undefined, token: string, mySeat: Seat | null) {

@@ -40,7 +40,7 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
     setTimeout(() => setToast(null), 2500);
   }
 
-  async function doAction(fn: () => Promise<void>, successMsg?: string) {
+  async function doAction(fn: () => Promise<unknown>, successMsg?: string) {
     if (actionPending) return;
     setActionPending(true);
     try {

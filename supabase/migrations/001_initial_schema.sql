@@ -44,5 +44,6 @@ CREATE POLICY "anon_insert" ON games
 -- No UPDATE policy for anon role.
 -- service_role key bypasses RLS and is used exclusively by Edge Functions.
 
--- Enable Realtime for this table (run in Supabase dashboard or via CLI):
--- ALTER PUBLICATION supabase_realtime ADD TABLE games;
+-- Enable Realtime for postgres_changes subscriptions
+ALTER TABLE games REPLICA IDENTITY FULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE games;

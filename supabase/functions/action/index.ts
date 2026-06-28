@@ -64,25 +64,36 @@ Deno.serve(async (req) => {
     const currentState = row.private_state as GameState;
     const currentVersion = row.version as number;
 
-    // Validate token and resolve seat
-    let seat: Seat;
-    try {
-      seat = resolveSeat(currentState, token);
-    } catch {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Special handling for JOIN_GAME — seat comes from server, not client
+    // JOIN_GAME: player2's token isn't in state yet, so skip resolveSeat
+    let seat: Seat | null = null;
     let actionToApply = action;
+
     if (action.type === 'JOIN_GAME') {
-      // Player2 is the joiner (player1 already joined at create-game time)
-      // Override the seat in the action with the correct one
-      actionToApply = { ...action, seat: 'player2' };
+      // Reject if this token is already player1 (creator visiting their own game)
+      if (currentState.players.player1?.token === token) {
+        return new Response(JSON.stringify({ error: 'Already in game', seat: 'player1' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      // Reject if player2 seat is already taken
+      if (currentState.players.player2 !== null) {
+        return new Response(JSON.stringify({ error: 'Game is full' }), {
+          status: 409,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      actionToApply = { ...action, seat: 'player2', token };
     } else {
-      // For all other actions, verify the seat matches the action's seat field if present
+      try {
+        seat = resolveSeat(currentState, token);
+      } catch {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       if ('seat' in action && (action as { seat?: Seat }).seat !== seat) {
         return new Response(JSON.stringify({ error: 'Seat mismatch' }), {
           status: 403,
@@ -105,12 +116,8 @@ Deno.serve(async (req) => {
       throw err;
     }
 
-    // After JOIN_GAME when both players are present, deal the hand
-    if (
-      action.type === 'JOIN_GAME' &&
-      newState.phase === 'active' &&
-      newState.currentHand?.phase === 'dealing'
-    ) {
+    // Auto-deal whenever a hand enters the dealing phase (JOIN_GAME and START_NEXT_HAND)
+    if (newState.currentHand?.phase === 'dealing') {
       newState = gameReducer(newState, { type: 'DEAL_HAND' });
     }
 
@@ -140,37 +147,48 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Broadcast private hands to each player's private Realtime channel
+    // Broadcast private hands via the Realtime HTTP broadcast API
     const p1 = newState.players.player1;
     const p2 = newState.players.player2;
 
-    const broadcastPromises: Promise<unknown>[] = [];
+    const broadcastMessages: { topic: string; event: string; payload: unknown }[] = [];
 
     if (p1) {
-      broadcastPromises.push(
-        supabase.realtime
-          .channel(`game:${gameId}:player1:${p1.token}`)
-          .send({
-            type: 'broadcast',
-            event: 'hand',
-            payload: { hand: p1.hand },
-          }),
-      );
+      broadcastMessages.push({
+        topic: `game:${gameId}:player1:${p1.token}`,
+        event: 'hand',
+        payload: { hand: p1.hand },
+      });
     }
 
     if (p2) {
-      broadcastPromises.push(
-        supabase.realtime
-          .channel(`game:${gameId}:player2:${p2.token}`)
-          .send({
-            type: 'broadcast',
-            event: 'hand',
-            payload: { hand: p2.hand },
-          }),
-      );
+      broadcastMessages.push({
+        topic: `game:${gameId}:player2:${p2.token}`,
+        event: 'hand',
+        payload: { hand: p2.hand },
+      });
     }
 
-    await Promise.all(broadcastPromises);
+    if (broadcastMessages.length > 0) {
+      await fetch(`${Deno.env.get('SUPABASE_URL')}/realtime/v1/api/broadcast`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'apikey': Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+        },
+        body: JSON.stringify({ messages: broadcastMessages }),
+      });
+    }
+
+    // For JOIN_GAME, include the joining player's hand in the response to avoid a
+    // race condition where the broadcast fires before the client subscribes.
+    if (action.type === 'JOIN_GAME') {
+      return new Response(JSON.stringify({ ok: true, hand: p2?.hand ?? [] }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
