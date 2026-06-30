@@ -1,6 +1,43 @@
 import { useCallback } from 'react';
 import { supabase, FUNCTIONS_URL } from '@/lib/supabase';
-import type { GameAction, Card, Seat } from '@/engine/types';
+import type { GameAction, GameState, PublicGameState, Card, Seat, Rank, Suit } from '@/engine/types';
+import { gameReducer, derivePublicState } from '@/engine/gameReducer';
+import { useGameStore } from '@/store/gameStore';
+
+function buildLocalGameState(
+  publicState: PublicGameState,
+  myHand: Card[],
+  mySeat: Seat,
+  token: string,
+): GameState {
+  const opponentSeat: Seat = mySeat === 'player1' ? 'player2' : 'player1';
+  const opponentCount = publicState.players[opponentSeat]?.cardCount ?? 0;
+  const fakeHand: Card[] = Array.from({ length: opponentCount }, (_, i) => ({
+    id: `__opt__${i}`, rank: '2' as Rank, suit: 'clubs' as Suit, isManilha: false, strength: 0,
+  }));
+  return {
+    gameId: publicState.gameId,
+    phase: publicState.phase,
+    players: {
+      player1: publicState.players.player1 ? {
+        seat: 'player1',
+        token: mySeat === 'player1' ? token : '',
+        hand: mySeat === 'player1' ? myHand : fakeHand,
+        isConnected: publicState.players.player1.isConnected,
+      } : null,
+      player2: publicState.players.player2 ? {
+        seat: 'player2',
+        token: mySeat === 'player2' ? token : '',
+        hand: mySeat === 'player2' ? myHand : fakeHand,
+        isConnected: publicState.players.player2.isConnected,
+      } : null,
+    },
+    score: publicState.score,
+    currentHand: publicState.currentHand,
+    handHistory: [],
+    version: publicState.version,
+  };
+}
 
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 
@@ -50,11 +87,33 @@ export function useGameActions(gameId: string | undefined, token: string, mySeat
   );
 
   const playCard = useCallback(
-    (cardId: string) => {
+    async (cardId: string) => {
       if (!mySeat) return Promise.reject(new Error('No seat'));
-      return dispatch({ type: 'PLAY_CARD', seat: mySeat, cardId });
+
+      const { publicState, myHand, forceSetPublicState, setMyHand } = useGameStore.getState();
+      const prevPublicState = publicState;
+      const prevHand = myHand;
+
+      if (publicState) {
+        try {
+          const localState = buildLocalGameState(publicState, myHand, mySeat, token);
+          const next = gameReducer(localState, { type: 'PLAY_CARD', seat: mySeat, cardId });
+          forceSetPublicState(derivePublicState(next));
+          setMyHand(next.players[mySeat]!.hand);
+        } catch {
+          // proceed without optimistic update if local reducer fails
+        }
+      }
+
+      try {
+        return await dispatch({ type: 'PLAY_CARD', seat: mySeat, cardId });
+      } catch (err) {
+        if (prevPublicState) forceSetPublicState(prevPublicState);
+        setMyHand(prevHand);
+        throw err;
+      }
     },
-    [dispatch, mySeat],
+    [dispatch, mySeat, token],
   );
 
   const callTruco = useCallback(

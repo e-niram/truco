@@ -8,6 +8,7 @@ interface GameStore {
   isConnected: boolean;
 
   setPublicState: (state: PublicGameState) => void;
+  forceSetPublicState: (state: PublicGameState) => void;
   setMyHand: (hand: Card[]) => void;
   setMySeat: (seat: Seat | null) => void;
   setConnected: (connected: boolean) => void;
@@ -26,6 +27,8 @@ export const useGameStore = create<GameStore>((set) => ({
       if (prev.publicState && state.version <= prev.publicState.version) return prev;
       return { publicState: state };
     }),
+
+  forceSetPublicState: (state) => set({ publicState: state }),
 
   setMyHand: (hand) => set({ myHand: hand }),
 
