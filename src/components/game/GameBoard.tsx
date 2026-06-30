@@ -283,14 +283,10 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
       {/* Match over */}
       <Modal open={isMatchOver}>
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)' }}>{t('gameOver')}</p>
           <p style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em' }}>
             {publicState.score.player1 >= 12
               ? mySeat === 'player1' ? t('youWon') : t('opponentWon')
               : mySeat === 'player2' ? t('youWon') : t('opponentWon')}
-          </p>
-          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.62)' }}>
-            {publicState.score.player1} × {publicState.score.player2}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <Button
