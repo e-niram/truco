@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useGameActions } from '@/hooks/useGameActions';
@@ -12,7 +12,7 @@ import { BettingPanel } from './BettingPanel';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
-import type { Seat } from '@/engine/types';
+import type { Seat, Trick } from '@/engine/types';
 
 interface GameBoardProps {
   gameId: string;
@@ -26,6 +26,15 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
   const [toast, setToast] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
 
+  // Freeze the last completed trick for 3 seconds to show the winner highlight.
+  // We watch hand.tricks.length rather than currentTrick.winner because the reducer
+  // resolves trick winner and resets currentTrick atomically in one state update —
+  // the client never sees an intermediate currentTrick with winner set (except for
+  // the last trick of a hand). hand.tricks always receives the completed trick first.
+  const completedTrickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevTricksLengthRef = useRef(0);
+  const [completedTrick, setCompletedTrick] = useState<Trick | null>(null);
+
   const hand = publicState?.currentHand;
   const bet = hand?.bet;
   const isMyTurn = hand?.currentTurn === mySeat && hand?.phase === 'playing';
@@ -38,8 +47,60 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
   const opponentCardCount = publicState?.players[opponentSeat]?.cardCount ?? 0;
 
   const currentTrick = hand?.currentTrick;
-  const myPlayedCard = mySeat === 'player1' ? currentTrick?.player1Card : currentTrick?.player2Card;
-  const theirPlayedCard = mySeat === 'player1' ? currentTrick?.player2Card : currentTrick?.player1Card;
+
+  // Reset ref and any active freeze when a new hand starts
+  useEffect(() => {
+    prevTricksLengthRef.current = 0;
+    setCompletedTrick(null);
+    if (completedTrickTimer.current) {
+      clearTimeout(completedTrickTimer.current);
+      completedTrickTimer.current = null;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hand?.handNumber]);
+
+  // Freeze when hand.tricks grows — this fires for every completed trick reliably
+  useEffect(() => {
+    const tricks = hand?.tricks ?? [];
+    const len = tricks.length;
+    if (len <= prevTricksLengthRef.current) return;
+    prevTricksLengthRef.current = len;
+
+    const lastTrick = tricks[len - 1];
+    if (!lastTrick) return;
+
+    setCompletedTrick(lastTrick);
+    if (completedTrickTimer.current) clearTimeout(completedTrickTimer.current);
+    completedTrickTimer.current = setTimeout(() => {
+      setCompletedTrick(null);
+      completedTrickTimer.current = null;
+    }, 3000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hand?.tricks.length]);
+
+  // Clear freeze early once a card appears in the next trick
+  useEffect(() => {
+    if (!completedTrick || currentTrick?.winner) return;
+    if (currentTrick?.player1Card || currentTrick?.player2Card) {
+      setCompletedTrick(null);
+      if (completedTrickTimer.current) {
+        clearTimeout(completedTrickTimer.current);
+        completedTrickTimer.current = null;
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrick?.player1Card?.id, currentTrick?.player2Card?.id]);
+
+  // Use the frozen trick for display if active, otherwise current
+  const displayTrick = completedTrick ?? currentTrick;
+  const myPlayedCard = mySeat === 'player1' ? displayTrick?.player1Card : displayTrick?.player2Card;
+  const theirPlayedCard = mySeat === 'player1' ? displayTrick?.player2Card : displayTrick?.player1Card;
+
+  // Highlight state — only active while the freeze is showing
+  const trickWinner = completedTrick?.winner ?? null;
+  const myCardWon = Boolean(trickWinner && trickWinner !== 'tie' && trickWinner === mySeat);
+  const theirCardWon = Boolean(trickWinner && trickWinner !== 'tie' && trickWinner !== mySeat);
+  const isTrickTie = trickWinner === 'tie';
 
   function showToast(msg: string) {
     setToast(msg);
@@ -137,14 +198,18 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ paddingBottom: '10px' }}>
               {hand && (theirPlayedCard
-                ? <Card card={theirPlayedCard} layoutId={`played-${theirPlayedCard.id}`} />
+                ? <div style={cardHighlight(theirCardWon, myCardWon, isTrickTie)}>
+                    <Card card={theirPlayedCard} layoutId={`played-${theirPlayedCard.id}`} />
+                  </div>
                 : <PlayedSlot />
               )}
             </div>
             <div style={{ alignSelf: 'stretch', height: '1px', background: 'rgba(255,255,255,0.05)', margin: '0 8px' }} />
             <div style={{ paddingTop: '10px' }}>
               {hand && (myPlayedCard
-                ? <Card card={myPlayedCard} layoutId={`played-${myPlayedCard.id}`} />
+                ? <div style={cardHighlight(myCardWon, theirCardWon, isTrickTie)}>
+                    <Card card={myPlayedCard} layoutId={`played-${myPlayedCard.id}`} />
+                  </div>
                 : <PlayedSlot />
               )}
             </div>
@@ -282,10 +347,27 @@ function PlayedSlot() {
         width: 'var(--card-width)',
         height: 'var(--card-height)',
         borderRadius: 'var(--card-radius)',
-        border: '1.5px dashed rgba(255,255,255,0.09)',
+        border: '1.5px dashed rgba(255,255,255,0.18)',
       }}
     />
   );
+}
+
+function cardHighlight(isWinner: boolean, isLoser: boolean, isTie: boolean): React.CSSProperties {
+  const base: React.CSSProperties = {
+    borderRadius: 'var(--card-radius)',
+    transition: 'box-shadow 250ms ease, opacity 250ms ease',
+  };
+  if (isTie) {
+    return { ...base, boxShadow: '0 0 0 2px rgba(255,255,255,0.55), 0 0 16px rgba(255,255,255,0.18)' };
+  }
+  if (isWinner) {
+    return { ...base, boxShadow: '0 0 0 2.5px #34D399, 0 0 20px rgba(52,211,153,0.4)' };
+  }
+  if (isLoser) {
+    return { ...base, opacity: 0.35 };
+  }
+  return base;
 }
 
 function trucoBtnStyle(pending: boolean, visible: boolean): React.CSSProperties {
