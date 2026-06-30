@@ -35,9 +35,11 @@ CREATE OR REPLACE TRIGGER games_updated_at
 -- They CANNOT update game state directly — only Edge Functions can (via service_role key).
 ALTER TABLE games ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "anon_select" ON games;
 CREATE POLICY "anon_select" ON games
   FOR SELECT TO anon USING (true);
 
+DROP POLICY IF EXISTS "anon_insert" ON games;
 CREATE POLICY "anon_insert" ON games
   FOR INSERT TO anon WITH CHECK (true);
 
