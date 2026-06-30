@@ -275,7 +275,48 @@ GitHub Pages serves only `index.html` and static assets — it has no server to 
 
 **Solution: hash routing.** URLs take the form `www.estebanmarin.me/truco/#/game/{id}`. The fragment (`#...`) is never sent to the server; GitHub Pages always serves `index.html`, and the React router reads the fragment client-side. Shareable game links work reliably with zero server configuration.
 
-### 6.6 Scalability (theoretical)
+### 6.6 Optimistic UI updates
+
+**Problem:** Every user action that touches the server has two moments of truth: when the user acts, and when the server confirms. Waiting for the second moment before updating the UI creates 700–1400ms of perceived latency — the full round trip of POST → DB read → reducer → DB write → Realtime event → render. Anything over ~100ms feels sluggish.
+
+**Solution: apply the action locally before awaiting the server.**
+
+You assume ("optimistically") the server will agree, update the UI immediately, then reconcile when the server responds. The pattern has three steps:
+
+1. **Snapshot** — save current state for rollback.
+2. **Apply locally** — run the same logic the server will run, client-side, synchronously. Update the UI.
+3. **Confirm or revert** — fire the real request in the background. On success, the server's authoritative state overwrites (usually a no-op if it matches). On failure, restore the snapshot.
+
+**Implementation in this game:**
+
+The key enabler is the shared `gameReducer` — a pure TypeScript function with no network or React dependencies, imported by both the Edge Function and the client. Because both sides run the same deterministic reducer, the client can predict the server's output exactly.
+
+On card play, the client:
+1. Reconstructs a local `GameState` from `publicState` (what it has) + `myHand` + placeholder cards for the opponent (needed only so `derivePublicState` computes the correct `cardCount`).
+2. Runs `gameReducer(localState, { type: 'PLAY_CARD', ... })` — zero network, instant.
+3. Calls `derivePublicState(next)` to get the optimistic `PublicGameState`.
+4. Pushes both the new public state and the new hand into the Zustand store immediately.
+5. Then fires `POST /action` in the background.
+
+**Reconciliation via version numbers:**
+
+The optimistic state keeps the current version N unchanged. When the Realtime event arrives with version N+1, the store's version guard (`version <= prev.version → skip`) passes: `(N+1) <= N` is false, so the authoritative state is applied. If the server errors, the snapshot is restored via `forceSetPublicState` (a second setter that bypasses the version guard, used only for optimistic writes and rollbacks).
+
+**The three hard problems:**
+
+| Problem | How this game handles it |
+|---|---|
+| Reconciliation | Version numbers; Realtime N+1 overwrites optimistic N |
+| Rollback | Snapshot before applying; restore on server error |
+| Conflicts | Optimistic lock on DB write; `retry: true` triggers client retry |
+
+**The key interview point:**
+
+Optimistic UI only works when the client can predict the server's result. This requires deterministic shared logic — one source of truth for rules, runnable on both sides. If the server has hidden state the client doesn't know (a price that changes, concurrent writes), optimistic updates are harder. In a turn-based game with a pure state machine, the prediction is exact.
+
+The junior answer to "how do you make this feel fast?" is "add a loading spinner." The senior answer is "don't need one."
+
+### 6.7 Scalability (theoretical)
 
 | Resource | Capacity | Bottleneck? |
 |---|---|---|

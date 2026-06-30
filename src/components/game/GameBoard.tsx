@@ -188,8 +188,30 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
           <OpponentHand cardCount={opponentCardCount} />
         </div>
 
-        {/* Upper table spacer */}
-        <div style={{ flex: 1 }} />
+        {/* Upper table spacer — doubles as hand result display */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '12px' }}>
+          <AnimatePresence>
+            {isHandOver && !isMatchOver && hand && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 6 }}
+                style={resultOverlayStyle}
+              >
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)' }}>
+                  {hand.winner === mySeat
+                    ? t('youWonHand')
+                    : hand.winner
+                    ? t('opponentWonHand')
+                    : t('tie')}
+                </p>
+                <p style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px' }}>
+                  +{hand.pointsAtStake} pts
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Center section: 3-column row — spacer | played cards + divider | Truco button */}
         <div style={{ width: '100%', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
@@ -257,29 +279,6 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
           onReject={() => doAction(() => actions.rejectBet())}
         />
       )}
-
-      {/* Hand result overlay */}
-      <AnimatePresence>
-        {isHandOver && !isMatchOver && hand && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            style={resultOverlayStyle}
-          >
-            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)' }}>
-              {hand.winner === mySeat
-                ? t('youWonHand')
-                : hand.winner
-                ? t('opponentWonHand')
-                : t('tie')}
-            </p>
-            <p style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px' }}>
-              +{hand.pointsAtStake} pts
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Match over */}
       <Modal open={isMatchOver}>
@@ -416,17 +415,11 @@ function trucoBtnStyle(pending: boolean, visible: boolean): React.CSSProperties 
 }
 
 const resultOverlayStyle: React.CSSProperties = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
   background: 'rgba(8,14,26,0.82)',
   backdropFilter: 'blur(14px)',
   WebkitBackdropFilter: 'blur(14px)',
   borderRadius: '18px',
   padding: '22px 32px',
   textAlign: 'center',
-  pointerEvents: 'none',
-  zIndex: 20,
   border: '1px solid rgba(255,255,255,0.07)',
 };
