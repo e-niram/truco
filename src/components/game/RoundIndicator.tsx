@@ -8,7 +8,7 @@ interface RoundIndicatorProps {
 
 export function RoundIndicator({ tricks, currentRound, mySeat }: RoundIndicatorProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'row', gap: '5px', alignItems: 'center' }}>
       {[1, 2, 3].map((round) => {
         const trick = tricks.find((t) => t.roundNumber === round);
         const isActive = round === currentRound && !trick?.winner;

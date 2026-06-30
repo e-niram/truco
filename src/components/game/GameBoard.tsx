@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useGameActions } from '@/hooks/useGameActions';
 import { canCallTruco } from '@/engine/betting';
-import { Sidebar } from './Sidebar';
-import { PlayedCards } from './PlayedCards';
+import { TopBar } from './TopBar';
+import { Card } from '@/components/cards/Card';
 import { PlayerHand } from './PlayerHand';
 import { OpponentHand } from './OpponentHand';
 import { BettingPanel } from './BettingPanel';
@@ -34,6 +34,10 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
 
   const opponentSeat: Seat = mySeat === 'player1' ? 'player2' : 'player1';
   const opponentCardCount = publicState?.players[opponentSeat]?.cardCount ?? 0;
+
+  const currentTrick = hand?.currentTrick;
+  const myPlayedCard = mySeat === 'player1' ? currentTrick?.player1Card : currentTrick?.player2Card;
+  const theirPlayedCard = mySeat === 'player1' ? currentTrick?.player2Card : currentTrick?.player1Card;
 
   function showToast(msg: string) {
     setToast(msg);
@@ -84,52 +88,90 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
 
   return (
     <div style={boardStyle}>
-      <AnimatePresence>
-        {!isConnected && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            style={reconnectingStyle}
-          >
-            Reconectando...
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main play area */}
-      <div style={mainAreaStyle}>
-        {/* Opponent hand */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '28px' }}>
-          <OpponentHand cardCount={opponentCardCount} />
-        </div>
-
-        {/* Played cards center */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          {hand && <PlayedCards trick={hand.currentTrick} mySeat={mySeat} />}
-        </div>
-
-        {/* Player hand */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: '36px' }}>
-          <PlayerHand
-            hand={myHand}
-            isMyTurn={isMyTurn}
-            onPlayCard={(cardId) => doAction(() => actions.playCard(cardId))}
-          />
-        </div>
-      </div>
-
-      {/* Sidebar */}
-      <Sidebar
+      {/* Top bar: scores + round */}
+      <TopBar
         scores={publicState.score}
         mySeat={mySeat}
         currentTurn={hand?.currentTurn ?? null}
         tricks={hand?.tricks ?? []}
         currentRound={hand ? ((hand.tricks.length + 1) as 1 | 2 | 3) : 1}
-        canCallTruco={canCallBet}
-        onCallTruco={() => doAction(() => actions.callTruco())}
-        actionPending={actionPending}
       />
+
+      {/* Main play area — flat anchor+spacer layout */}
+      <div style={mainAreaStyle}>
+        <AnimatePresence>
+          {!isConnected && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              style={reconnectingStyle}
+            >
+              Reconectando...
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Opponent hand — anchored to top. paddingTop ≥ card height so the
+            180-deg-rotated cards (which extend upward from their natural box)
+            don't get clipped by the container's overflow:hidden.
+            marginBottom: -104px cancels the card's natural layout box (which
+            extends downward even though the visual is above), so the flex
+            spacers treat this section as 112px tall — matching the visual
+            card bottom — and the divider floats to the true midpoint. */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '112px', flexShrink: 0, marginBottom: '-104px' }}>
+          <OpponentHand cardCount={opponentCardCount} />
+        </div>
+
+        {/* Upper table spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Opponent's played card */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '10px', flexShrink: 0 }}>
+          {hand && (theirPlayedCard
+            ? <Card card={theirPlayedCard} layoutId={`played-${theirPlayedCard.id}`} />
+            : <PlayedSlot />
+          )}
+        </div>
+
+        {/* Center divider */}
+        <div style={{ height: '1px', flexShrink: 0, background: 'rgba(255,255,255,0.05)', margin: '0 20px' }} />
+
+        {/* Truco pill — on the table, centered below the divider */}
+        {canCallBet && (
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '14px', flexShrink: 0 }}>
+            <button
+              onClick={() => doAction(() => actions.callTruco())}
+              disabled={actionPending}
+              style={trucoBtnStyle(actionPending)}
+            >
+              TRUCO!
+            </button>
+          </div>
+        )}
+
+        {/* My played card */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', flexShrink: 0 }}>
+          {hand && (myPlayedCard
+            ? <Card card={myPlayedCard} layoutId={`played-${myPlayedCard.id}`} />
+            : <PlayedSlot />
+          )}
+        </div>
+
+        {/* Lower table spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Player hand — anchored to bottom */}
+        <div style={{ paddingBottom: '32px', width: '100%', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <PlayerHand
+              hand={myHand}
+              isMyTurn={isMyTurn}
+              onPlayCard={(cardId) => doAction(() => actions.playCard(cardId))}
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Betting overlay */}
       {isBetting && bet && (
@@ -190,9 +232,8 @@ const boardStyle: React.CSSProperties = {
   width: '100%',
   height: '100%',
   display: 'flex',
-  flexDirection: 'row',
+  flexDirection: 'column',
   background: 'var(--color-table)',
-  position: 'relative',
   overflow: 'hidden',
   maxWidth: '480px',
   margin: '0 auto',
@@ -202,8 +243,8 @@ const mainAreaStyle: React.CSSProperties = {
   flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  minWidth: 0,
   overflow: 'hidden',
+  position: 'relative',
 };
 
 const centerStyle: React.CSSProperties = {
@@ -216,7 +257,7 @@ const centerStyle: React.CSSProperties = {
 
 const reconnectingStyle: React.CSSProperties = {
   position: 'absolute',
-  top: '10px',
+  top: '8px',
   left: '50%',
   transform: 'translateX(-50%)',
   fontSize: '12px',
@@ -227,6 +268,35 @@ const reconnectingStyle: React.CSSProperties = {
   zIndex: 50,
   whiteSpace: 'nowrap',
 };
+
+function PlayedSlot() {
+  return (
+    <div
+      style={{
+        width: 'var(--card-width)',
+        height: 'var(--card-height)',
+        borderRadius: 'var(--card-radius)',
+        border: '1.5px dashed rgba(255,255,255,0.09)',
+      }}
+    />
+  );
+}
+
+function trucoBtnStyle(disabled: boolean): React.CSSProperties {
+  return {
+    background: 'rgba(249,115,22,0.1)',
+    color: 'var(--color-accent)',
+    border: '1.5px solid rgba(249,115,22,0.4)',
+    borderRadius: '100px',
+    padding: '7px 26px',
+    fontSize: '12px',
+    fontWeight: 800,
+    letterSpacing: '0.1em',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.55 : 1,
+    transition: 'opacity 150ms ease',
+  };
+}
 
 const resultOverlayStyle: React.CSSProperties = {
   position: 'absolute',
