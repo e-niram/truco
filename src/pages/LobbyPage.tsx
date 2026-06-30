@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { createGame } from '@/hooks/useGameActions';
 import { usePlayerIdentity } from '@/hooks/usePlayerIdentity';
+import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/Button';
 import { CopyLink } from '@/components/lobby/CopyLink';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 export function LobbyPage() {
   const { token } = usePlayerIdentity();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -21,7 +24,7 @@ export function LobbyPage() {
       const url = `${window.location.origin}${window.location.pathname}#/game/${gameId}`;
       setShareUrl(url);
     } catch {
-      setError('Não foi possível criar a partida. Tente novamente.');
+      setError(t('createError'));
     } finally {
       setLoading(false);
     }
@@ -39,15 +42,18 @@ export function LobbyPage() {
           <h1 style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.03em' }}>
             Truco Mineiro
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginTop: '6px' }}>
-            Convide um amigo e jogue
+          <p style={{ color: 'rgba(255,255,255,0.62)', fontSize: '14px', marginTop: '6px' }}>
+            {t('subtitle')}
           </p>
+          <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'center' }}>
+            <LanguageSwitcher />
+          </div>
         </div>
 
         {!shareUrl ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <Button onClick={handleCreate} disabled={loading}>
-              {loading ? 'Criando...' : 'Nova partida'}
+              {loading ? t('creating') : t('newGame')}
             </Button>
             {error && (
               <p style={{ fontSize: '13px', color: '#e53e3e', textAlign: 'center' }}>{error}</p>
@@ -60,8 +66,8 @@ export function LobbyPage() {
             style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
           >
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
-                Partida criada! Envie este link para seu oponente:
+              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.65)', marginBottom: '4px' }}>
+                {t('gameCreated')}
               </p>
             </div>
             <CopyLink url={shareUrl} />
@@ -72,7 +78,7 @@ export function LobbyPage() {
                 if (id) navigate(`/game/${id}`);
               }}
             >
-              Entrar na partida
+              {t('joinGame')}
             </Button>
           </motion.div>
         )}

@@ -1,13 +1,15 @@
 import type { BetState, Seat } from '@/engine/types';
 import { canRaiseBet } from '@/engine/betting';
+import { useLanguage } from '@/lib/LanguageContext';
+import type { TranslationKey } from '@/lib/i18n';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 
-const BET_NAMES: Record<number, string> = {
-  4: 'Truco',
-  6: 'Seis',
-  10: 'Dez',
-  12: 'Doze',
+const BET_LEVEL_KEY: Record<number, TranslationKey> = {
+  4: 'betTruco',
+  6: 'betSix',
+  10: 'betTen',
+  12: 'betTwelve',
 };
 
 interface BettingPanelProps {
@@ -19,21 +21,23 @@ interface BettingPanelProps {
 }
 
 export function BettingPanel({ bet, mySeat, onAccept, onRaise, onReject }: BettingPanelProps) {
+  const { t } = useLanguage();
   const isMyCall = bet.calledBy === mySeat;
   const pendingValue = bet.pendingLevel ?? 0;
-  const callName = BET_NAMES[pendingValue] ?? String(pendingValue);
+  const callName = BET_LEVEL_KEY[pendingValue] ? t(BET_LEVEL_KEY[pendingValue]) : String(pendingValue);
   const canRaise = mySeat ? canRaiseBet(bet, mySeat) : false;
+  const nextKey = BET_LEVEL_KEY[pendingValue + 2];
+  const nextName = nextKey ? t(nextKey) : String(pendingValue + 2);
 
-  // Only show the panel to the opponent of the caller
   if (isMyCall) {
     return (
       <Modal open>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px' }}>
-            Você pediu {callName}
+          <p style={{ color: 'rgba(255,255,255,0.62)', fontSize: '14px' }}>
+            {t('youCalled')} {callName}
           </p>
-          <p style={{ marginTop: '8px', fontSize: '14px', color: 'rgba(255,255,255,0.4)' }}>
-            Aguardando resposta do oponente...
+          <p style={{ marginTop: '8px', fontSize: '14px', color: 'rgba(255,255,255,0.62)' }}>
+            {t('waitingResponse')}
           </p>
         </div>
       </Modal>
@@ -44,28 +48,28 @@ export function BettingPanel({ bet, mySeat, onAccept, onRaise, onReject }: Betti
     <Modal open>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
-            Oponente pediu
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)', marginBottom: '6px' }}>
+            {t('opponentCalled')}
           </p>
           <p style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em' }}>
             {callName}!
           </p>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-            mão vale {pendingValue} pontos
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)', marginTop: '4px' }}>
+            {t('handWorth', { value: pendingValue })}
           </p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <Button onClick={onAccept}>Aceitar ({pendingValue} pts)</Button>
+          <Button onClick={onAccept}>{t('accept', { value: pendingValue })}</Button>
 
           {canRaise && (
             <Button variant="ghost" onClick={onRaise}>
-              Aumentar para {BET_NAMES[(pendingValue + 2) as keyof typeof BET_NAMES] ?? pendingValue + 2}
+              {t('raiseTo', { name: nextName })}
             </Button>
           )}
 
           <Button variant="danger" onClick={onReject}>
-            Correr ({bet.currentLevel} pts para eles)
+            {t('fold', { value: bet.currentLevel })}
           </Button>
         </div>
       </div>

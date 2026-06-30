@@ -1,4 +1,6 @@
 import type { Seat, Trick } from '@/engine/types';
+import { useLanguage } from '@/lib/LanguageContext';
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 interface TopBarProps {
   scores: { player1: number; player2: number };
@@ -117,7 +119,7 @@ function ScoreChip({ label, score, isActive, isMe, align }: ScoreChipProps) {
             fontSize: '24px',
             fontWeight: 800,
             lineHeight: 1,
-            color: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
+            color: isActive ? '#fff' : 'rgba(255,255,255,0.62)',
             transition: 'color 300ms ease',
             fontVariantNumeric: 'tabular-nums',
           }}
@@ -136,6 +138,7 @@ export function TopBar({
   tricks,
   currentRound,
 }: TopBarProps) {
+  const { t } = useLanguage();
   const myScore = mySeat ? scores[mySeat] : scores.player1;
   const opponentSeat: Seat = mySeat === 'player1' ? 'player2' : 'player1';
   const theirScore = scores[opponentSeat];
@@ -158,7 +161,7 @@ export function TopBar({
       {/* Left: opponent score */}
       <div style={{ flex: 1 }}>
         <ScoreChip
-          label="OPP"
+          label={t('opp')}
           score={theirScore}
           isActive={isTheirTurn}
           isMe={false}
@@ -166,7 +169,7 @@ export function TopBar({
         />
       </div>
 
-      {/* Center: round dots */}
+      {/* Center: round label + dots + language switcher */}
       <div
         style={{
           display: 'flex',
@@ -184,12 +187,13 @@ export function TopBar({
             color: 'rgba(255,255,255,0.16)',
           }}
         >
-          MÃO
+          {t('hand')}
         </span>
         <RoundDots tricks={tricks} currentRound={currentRound} mySeat={mySeat} />
+        <LanguageSwitcher compact />
       </div>
 
-      {/* Right: TRUCO button (when available) + my score */}
+      {/* Right: my score */}
       <div
         style={{
           flex: 1,
@@ -200,7 +204,7 @@ export function TopBar({
         }}
       >
         <ScoreChip
-          label="VOCÊ"
+          label={t('you')}
           score={myScore}
           isActive={isMyTurn}
           isMe={true}

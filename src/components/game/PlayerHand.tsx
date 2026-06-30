@@ -54,21 +54,6 @@ export function PlayerHand({ hand, isMyTurn, onPlayCard }: PlayerHandProps) {
         </div>
       ))}
 
-      {isMyTurn && hand.length > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '-24px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            fontSize: '11px',
-            color: 'rgba(255,255,255,0.35)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {selectedId ? 'toque novamente para jogar' : 'toque em uma carta'}
-        </div>
-      )}
     </div>
   );
 }

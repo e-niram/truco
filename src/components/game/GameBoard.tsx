@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useGameActions } from '@/hooks/useGameActions';
 import { canCallTruco } from '@/engine/betting';
+import { useLanguage } from '@/lib/LanguageContext';
 import { TopBar } from './TopBar';
 import { Card } from '@/components/cards/Card';
 import { PlayerHand } from './PlayerHand';
@@ -21,6 +22,7 @@ interface GameBoardProps {
 export function GameBoard({ gameId, token }: GameBoardProps) {
   const { publicState, myHand, mySeat, isConnected } = useGameStore();
   const actions = useGameActions(gameId, token, mySeat);
+  const { t } = useLanguage();
   const [toast, setToast] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
 
@@ -71,7 +73,7 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
   if (!publicState) {
     return (
       <div style={centerStyle}>
-        <p style={{ color: 'var(--color-muted)', fontSize: '14px' }}>Carregando...</p>
+        <p style={{ color: 'rgba(255,255,255,0.62)', fontSize: '14px' }}>{t('loading')}</p>
       </div>
     );
   }
@@ -79,9 +81,7 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
   if (publicState.phase === 'waiting') {
     return (
       <div style={centerStyle}>
-        <p style={{ fontSize: '14px', color: 'var(--color-muted)' }}>
-          Aguardando oponente...
-        </p>
+        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.62)' }}>{t('waitingOpponent')}</p>
       </div>
     );
   }
@@ -107,7 +107,7 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
               exit={{ opacity: 0, y: -8 }}
               style={reconnectingStyle}
             >
-              Reconectando...
+              {t('reconnecting')}
             </motion.div>
           )}
         </AnimatePresence>
@@ -126,36 +126,41 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
         {/* Upper table spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Opponent's played card */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: '10px', flexShrink: 0 }}>
-          {hand && (theirPlayedCard
-            ? <Card card={theirPlayedCard} layoutId={`played-${theirPlayedCard.id}`} />
-            : <PlayedSlot />
-          )}
-        </div>
+        {/* Center section: 3-column row — spacer | played cards + divider | Truco button */}
+        <div style={{ width: '100%', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
 
-        {/* Center divider */}
-        <div style={{ height: '1px', flexShrink: 0, background: 'rgba(255,255,255,0.05)', margin: '0 20px' }} />
+          {/* Left balance spacer (mirrors Truco column width) */}
+          <div style={{ width: '68px', flexShrink: 0 }} />
 
-        {/* Truco pill — on the table, centered below the divider */}
-        {canCallBet && (
-          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '14px', flexShrink: 0 }}>
+          {/* Cards column */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ paddingBottom: '10px' }}>
+              {hand && (theirPlayedCard
+                ? <Card card={theirPlayedCard} layoutId={`played-${theirPlayedCard.id}`} />
+                : <PlayedSlot />
+              )}
+            </div>
+            <div style={{ alignSelf: 'stretch', height: '1px', background: 'rgba(255,255,255,0.05)', margin: '0 8px' }} />
+            <div style={{ paddingTop: '10px' }}>
+              {hand && (myPlayedCard
+                ? <Card card={myPlayedCard} layoutId={`played-${myPlayedCard.id}`} />
+                : <PlayedSlot />
+              )}
+            </div>
+          </div>
+
+          {/* Right: Truco square button — always in layout, hidden when unavailable */}
+          <div style={{ width: '68px', flexShrink: 0, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
             <button
               onClick={() => doAction(() => actions.callTruco())}
-              disabled={actionPending}
-              style={trucoBtnStyle(actionPending)}
+              disabled={actionPending || !canCallBet}
+              style={trucoBtnStyle(actionPending, canCallBet)}
             >
-              TRUCO!
+              <span style={{ fontSize: '20px', lineHeight: 1 }}>✊</span>
+              <span style={{ display: 'block', fontSize: '8px', fontWeight: 800, letterSpacing: '0.1em', marginTop: '4px', lineHeight: 1 }}>TRUCO</span>
             </button>
           </div>
-        )}
 
-        {/* My played card */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '12px', flexShrink: 0 }}>
-          {hand && (myPlayedCard
-            ? <Card card={myPlayedCard} layoutId={`played-${myPlayedCard.id}`} />
-            : <PlayedSlot />
-          )}
         </div>
 
         {/* Lower table spacer */}
@@ -193,12 +198,12 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
             exit={{ opacity: 0, scale: 0.9 }}
             style={resultOverlayStyle}
           >
-            <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)' }}>
               {hand.winner === mySeat
-                ? 'Você ganhou a mão!'
+                ? t('youWonHand')
                 : hand.winner
-                ? 'Oponente ganhou a mão'
-                : 'Empate'}
+                ? t('opponentWonHand')
+                : t('tie')}
             </p>
             <p style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px' }}>
               +{hand.pointsAtStake} pts
@@ -210,16 +215,16 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
       {/* Match over */}
       <Modal open={isMatchOver}>
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <p style={{ fontSize: '13px', color: 'var(--color-muted)' }}>Fim de jogo</p>
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)' }}>{t('gameOver')}</p>
           <p style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em' }}>
             {publicState.score.player1 >= 12
-              ? mySeat === 'player1' ? 'Você ganhou!' : 'Oponente ganhou'
-              : mySeat === 'player2' ? 'Você ganhou!' : 'Oponente ganhou'}
+              ? mySeat === 'player1' ? t('youWon') : t('opponentWon')
+              : mySeat === 'player2' ? t('youWon') : t('opponentWon')}
           </p>
-          <p style={{ fontSize: '14px', color: 'var(--color-muted)' }}>
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.62)' }}>
             {publicState.score.player1} × {publicState.score.player2}
           </p>
-          <Button onClick={() => window.location.reload()}>Jogar de novo</Button>
+          <Button onClick={() => window.location.reload()}>{t('playAgain')}</Button>
         </div>
       </Modal>
 
@@ -282,19 +287,24 @@ function PlayedSlot() {
   );
 }
 
-function trucoBtnStyle(disabled: boolean): React.CSSProperties {
+function trucoBtnStyle(pending: boolean, visible: boolean): React.CSSProperties {
   return {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '48px',
+    height: '56px',
+    padding: 0,
     background: 'rgba(249,115,22,0.1)',
     color: 'var(--color-accent)',
     border: '1.5px solid rgba(249,115,22,0.4)',
-    borderRadius: '100px',
-    padding: '7px 26px',
-    fontSize: '12px',
-    fontWeight: 800,
-    letterSpacing: '0.1em',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.55 : 1,
-    transition: 'opacity 150ms ease',
+    borderRadius: '12px',
+    cursor: pending ? 'not-allowed' : 'pointer',
+    opacity: pending ? 0.55 : 1,
+    transition: 'opacity 150ms ease, box-shadow 150ms ease',
+    boxShadow: '0 0 12px rgba(249,115,22,0.12)',
+    visibility: visible ? 'visible' : 'hidden',
   };
 }
 

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/Button';
 
 interface CopyLinkProps {
@@ -6,6 +7,7 @@ interface CopyLinkProps {
 }
 
 export function CopyLink({ url }: CopyLinkProps) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -23,7 +25,7 @@ export function CopyLink({ url }: CopyLinkProps) {
           borderRadius: '10px',
           padding: '12px 14px',
           fontSize: '13px',
-          color: 'rgba(255,255,255,0.5)',
+          color: 'rgba(255,255,255,0.62)',
           wordBreak: 'break-all',
           fontFamily: 'var(--font-mono)',
         }}
@@ -31,7 +33,7 @@ export function CopyLink({ url }: CopyLinkProps) {
         {url}
       </div>
       <Button onClick={handleCopy} variant={copied ? 'ghost' : 'primary'}>
-        {copied ? 'Copiado!' : 'Copiar link'}
+        {copied ? t('copied') : t('copyLink')}
       </Button>
     </div>
   );
