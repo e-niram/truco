@@ -26,7 +26,7 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER games_updated_at
+CREATE OR REPLACE TRIGGER games_updated_at
   BEFORE UPDATE ON games
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
