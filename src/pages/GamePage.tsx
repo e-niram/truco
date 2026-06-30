@@ -12,13 +12,16 @@ export function GamePage() {
   const { token } = usePlayerIdentity();
   const navigate = useNavigate();
 
-  const { mySeat, publicState, myHand, setPublicState, setMySeat, setMyHand } = useGameStore();
+  const { mySeat, publicState, myHand, setPublicState, setMySeat, setMyHand, reset } = useGameStore();
   const actions = useGameActions(gameId, token, mySeat);
   const joinedRef = useRef(false);
 
   // Load initial state and determine our seat
   useEffect(() => {
     if (!gameId) return;
+    // Reset store so version guard never blocks the incoming state
+    reset();
+    joinedRef.current = false;
 
     async function init() {
       const state = await fetchPublicState(gameId!);

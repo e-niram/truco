@@ -48,13 +48,13 @@ export function BettingPanel({ bet, mySeat, onAccept, onRaise, onReject }: Betti
     <Modal open>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)', marginBottom: '6px' }}>
+          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.62)', marginBottom: '6px' }}>
             {t('opponentCalled')}
           </p>
           <p style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.02em' }}>
             {callName}!
           </p>
-          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)', marginTop: '4px' }}>
+          <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.62)', marginTop: '4px' }}>
             {t('handWorth', { value: pendingValue })}
           </p>
         </div>

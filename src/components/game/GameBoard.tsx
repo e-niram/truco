@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
-import { useGameActions } from '@/hooks/useGameActions';
+import { useGameActions, createGame } from '@/hooks/useGameActions';
 import { canCallTruco } from '@/engine/betting';
 import { useLanguage } from '@/lib/LanguageContext';
 import { TopBar } from './TopBar';
@@ -23,8 +24,10 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
   const { publicState, myHand, mySeat, isConnected } = useGameStore();
   const actions = useGameActions(gameId, token, mySeat);
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [toast, setToast] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [creatingGame, setCreatingGame] = useState(false);
 
   // Freeze the last completed trick for 3 seconds to show the winner highlight.
   // We watch hand.tricks.length rather than currentTrick.winner because the reducer
@@ -290,7 +293,28 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
           <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.62)' }}>
             {publicState.score.player1} × {publicState.score.player2}
           </p>
-          <Button onClick={() => window.location.reload()}>{t('playAgain')}</Button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <Button
+              onClick={async () => {
+                if (creatingGame) return;
+                setCreatingGame(true);
+                try {
+                  const newId = await createGame(token);
+                  navigate(`/game/${newId}`);
+                } catch (err) {
+                  const msg = err instanceof Error ? err.message : 'Erro';
+                  showToast(msg);
+                  setCreatingGame(false);
+                }
+              }}
+              disabled={creatingGame}
+            >
+              {t('playAgain')}
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/')}>
+              {t('backToStart')}
+            </Button>
+          </div>
         </div>
       </Modal>
 
