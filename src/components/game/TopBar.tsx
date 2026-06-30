@@ -1,6 +1,5 @@
 import type { Seat, Trick } from '@/engine/types';
 import { useLanguage } from '@/lib/LanguageContext';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 
 interface TopBarProps {
   scores: { player1: number; player2: number };
@@ -8,6 +7,7 @@ interface TopBarProps {
   currentTurn: Seat | null;
   tricks: Trick[];
   currentRound: 1 | 2 | 3;
+  pointsAtStake: number;
 }
 
 function RoundDots({
@@ -20,7 +20,7 @@ function RoundDots({
   mySeat: Seat | null;
 }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'row', gap: '5px', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'row', gap: '6px', alignItems: 'center' }}>
       {([1, 2, 3] as const).map((round) => {
         const trick = tricks.find((t) => t.roundNumber === round);
         const isActive = round === currentRound && !trick?.winner;
@@ -49,8 +49,8 @@ function RoundDots({
           <div
             key={round}
             style={{
-              width: '7px',
-              height: '7px',
+              width: '8px',
+              height: '8px',
               borderRadius: '50%',
               background: bg,
               border: `1.5px solid ${border}`,
@@ -81,15 +81,15 @@ function ScoreChip({ label, score, isActive, isMe, align }: ScoreChipProps) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: isRight ? 'flex-end' : 'flex-start',
-        gap: '3px',
+        gap: '4px',
       }}
     >
       <span
         style={{
-          fontSize: '9px',
+          fontSize: '11px',
           fontWeight: 700,
-          letterSpacing: '0.1em',
-          color: isActive ? activeColor : 'rgba(255,255,255,0.22)',
+          letterSpacing: '0.09em',
+          color: isActive ? activeColor : 'rgba(255,255,255,0.35)',
           transition: 'color 300ms ease',
         }}
       >
@@ -99,24 +99,24 @@ function ScoreChip({ label, score, isActive, isMe, align }: ScoreChipProps) {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
+          gap: '7px',
           flexDirection: isRight ? 'row-reverse' : 'row',
         }}
       >
         <div
           style={{
-            width: '7px',
-            height: '7px',
+            width: '9px',
+            height: '9px',
             borderRadius: '50%',
             flexShrink: 0,
-            background: isActive ? activeColor : 'rgba(255,255,255,0.1)',
-            boxShadow: isActive ? `0 0 7px ${activeColor}` : 'none',
+            background: isActive ? activeColor : 'rgba(255,255,255,0.12)',
+            boxShadow: isActive ? `0 0 8px ${activeColor}` : 'none',
             transition: 'all 300ms ease',
           }}
         />
         <span
           style={{
-            fontSize: '24px',
+            fontSize: '28px',
             fontWeight: 800,
             lineHeight: 1,
             color: isActive ? '#fff' : 'rgba(255,255,255,0.62)',
@@ -137,6 +137,7 @@ export function TopBar({
   currentTurn,
   tricks,
   currentRound,
+  pointsAtStake,
 }: TopBarProps) {
   const { t } = useLanguage();
   const myScore = mySeat ? scores[mySeat] : scores.player1;
@@ -145,6 +146,7 @@ export function TopBar({
 
   const isMyTurn = currentTurn !== null && currentTurn === mySeat;
   const isTheirTurn = currentTurn !== null && currentTurn !== mySeat;
+  const stakesElevated = pointsAtStake > 2;
 
   return (
     <div
@@ -153,7 +155,7 @@ export function TopBar({
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
-        padding: '10px 16px',
+        padding: '14px 16px',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
         background: 'rgba(0,0,0,0.22)',
       }}
@@ -169,28 +171,42 @@ export function TopBar({
         />
       </div>
 
-      {/* Center: round label + dots + language switcher */}
+      {/* Center: round label + dots with stakes value inline to their right */}
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '4px',
+          gap: '5px',
           flexShrink: 0,
         }}
       >
         <span
           style={{
-            fontSize: '7px',
+            fontSize: '8px',
             fontWeight: 700,
             letterSpacing: '0.12em',
-            color: 'rgba(255,255,255,0.16)',
+            color: 'rgba(255,255,255,0.2)',
           }}
         >
           {t('hand')}
         </span>
-        <RoundDots tricks={tricks} currentRound={currentRound} mySeat={mySeat} />
-        <LanguageSwitcher compact />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <RoundDots tricks={tricks} currentRound={currentRound} mySeat={mySeat} />
+          <span
+            style={{
+              fontSize: '20px',
+              fontWeight: 800,
+              lineHeight: 1,
+              letterSpacing: '-0.02em',
+              color: stakesElevated ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)',
+              transition: 'color 300ms ease',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {pointsAtStake}
+          </span>
+        </div>
       </div>
 
       {/* Right: my score */}
@@ -200,7 +216,6 @@ export function TopBar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'flex-end',
-          gap: '10px',
         }}
       >
         <ScoreChip

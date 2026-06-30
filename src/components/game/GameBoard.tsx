@@ -95,6 +95,7 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
         currentTurn={hand?.currentTurn ?? null}
         tricks={hand?.tricks ?? []}
         currentRound={hand ? ((hand.tricks.length + 1) as 1 | 2 | 3) : 1}
+        pointsAtStake={hand?.pointsAtStake ?? 2}
       />
 
       {/* Main play area — flat anchor+spacer layout */}

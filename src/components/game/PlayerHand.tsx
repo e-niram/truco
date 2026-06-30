@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Card as CardType } from '@/engine/types';
 import { Card } from '@/components/cards/Card';
 
@@ -9,19 +8,6 @@ interface PlayerHandProps {
 }
 
 export function PlayerHand({ hand, isMyTurn, onPlayCard }: PlayerHandProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  function handleCardClick(cardId: string) {
-    if (!isMyTurn) return;
-    if (selectedId === cardId) {
-      // Second tap on selected card → play it
-      onPlayCard(cardId);
-      setSelectedId(null);
-    } else {
-      setSelectedId(cardId);
-    }
-  }
-
   const angles = hand.length === 3 ? [-6, 0, 6] : hand.length === 2 ? [-4, 4] : [0];
 
   return (
@@ -31,7 +17,6 @@ export function PlayerHand({ hand, isMyTurn, onPlayCard }: PlayerHandProps) {
         alignItems: 'flex-end',
         justifyContent: 'center',
         gap: '8px',
-        position: 'relative',
       }}
     >
       {hand.map((card, i) => (
@@ -47,13 +32,11 @@ export function PlayerHand({ hand, isMyTurn, onPlayCard }: PlayerHandProps) {
             card={card}
             layoutId={card.id}
             interactive={isMyTurn}
-            selected={selectedId === card.id}
-            onClick={() => handleCardClick(card.id)}
+            onClick={() => { if (isMyTurn) onPlayCard(card.id); }}
             dealDelay={i * 0.08}
           />
         </div>
       ))}
-
     </div>
   );
 }
