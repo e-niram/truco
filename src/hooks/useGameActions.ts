@@ -180,6 +180,28 @@ export async function createGame(playerToken: string): Promise<string> {
   return gameId;
 }
 
+// Utility: request a rematch for a finished game via the /request-rematch Edge Function.
+// The first player to call this creates a new game and links it to the old one;
+// the second player's call returns that same new game's id.
+export async function requestRematch(oldGameId: string, playerToken: string): Promise<string> {
+  const res = await fetch(`${FUNCTIONS_URL}/request-rematch`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${ANON_KEY}`,
+    },
+    body: JSON.stringify({ gameId: oldGameId, token: playerToken }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error ?? 'Failed to request rematch');
+  }
+
+  const { gameId } = await res.json() as { gameId: string };
+  return gameId;
+}
+
 // Load the initial public state for a game by ID
 export async function fetchPublicState(gameId: string) {
   const { data, error } = await supabase

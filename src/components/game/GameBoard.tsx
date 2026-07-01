@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
-import { useGameActions, createGame } from '@/hooks/useGameActions';
+import { useGameActions, requestRematch } from '@/hooks/useGameActions';
 import { canCallTruco } from '@/engine/betting';
 import { useLanguage } from '@/lib/LanguageContext';
 import { TopBar } from './TopBar';
@@ -294,7 +294,7 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
                 if (creatingGame) return;
                 setCreatingGame(true);
                 try {
-                  const newId = await createGame(token);
+                  const newId = await requestRematch(gameId, token);
                   navigate(`/game/${newId}`);
                 } catch (err) {
                   const msg = err instanceof Error ? err.message : 'Erro';
