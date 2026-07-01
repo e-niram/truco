@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { Button } from '@/components/ui/Button';
 import { CopyLink } from '@/components/lobby/CopyLink';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { TutorialModal } from '@/components/lobby/TutorialModal';
 
 export function LobbyPage() {
   const { token } = usePlayerIdentity();
@@ -15,6 +16,7 @@ export function LobbyPage() {
   const [loading, setLoading] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
 
   async function handleCreate() {
     setLoading(true);
@@ -55,6 +57,9 @@ export function LobbyPage() {
             <Button onClick={handleCreate} disabled={loading}>
               {loading ? t('creating') : t('newGame')}
             </Button>
+            <Button variant="ghost" onClick={() => setTutorialOpen(true)}>
+              {t('tutorialButton')}
+            </Button>
             {error && (
               <p style={{ fontSize: '13px', color: '#e53e3e', textAlign: 'center' }}>{error}</p>
             )}
@@ -83,6 +88,8 @@ export function LobbyPage() {
           </motion.div>
         )}
       </motion.div>
+
+      <TutorialModal open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
     </div>
   );
 }

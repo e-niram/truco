@@ -10,7 +10,13 @@ export type TranslationKey =
   | 'youWonHand' | 'opponentWonHand' | 'tie'
   | 'gameOver' | 'youWon' | 'opponentWon' | 'playAgain' | 'backToStart'
   | 'opp' | 'you' | 'hand'
-  | 'betTruco' | 'betSix' | 'betTen' | 'betTwelve';
+  | 'betTruco' | 'betSix' | 'betTen' | 'betTwelve'
+  | 'tutorialButton' | 'tutorialNext' | 'tutorialPrevious' | 'tutorialDone'
+  | 'tutorialTitle1' | 'tutorialBody1'
+  | 'tutorialTitle2' | 'tutorialBody2'
+  | 'tutorialTitle3' | 'tutorialBody3'
+  | 'tutorialTitle4' | 'tutorialBody4'
+  | 'tutorialTitle5' | 'tutorialBody5';
 
 type Dict = Record<TranslationKey, string>;
 
@@ -49,6 +55,20 @@ export const translations: Record<Language, Dict> = {
     betSix: 'Seis',
     betTen: 'Dez',
     betTwelve: 'Doze',
+    tutorialButton: 'Tutorial',
+    tutorialNext: 'Próximo',
+    tutorialPrevious: 'Anterior',
+    tutorialDone: 'Concluir',
+    tutorialTitle1: 'Objetivo',
+    tutorialBody1: 'Dois jogadores disputam pontos até 12. Em cada mão, vocês recebem 3 cartas.',
+    tutorialTitle2: 'Força das cartas',
+    tutorialBody2: 'As manilhas mandam: 4 de paus (zap), 7 de copas (copeta), Ás de espadas (espadilha) e 7 de ouros (pica-fumo), da mais forte à mais fraca. As demais cartas seguem: 3, 2, A, K, J, Q, 7, 6, 5, 4.',
+    tutorialTitle3: 'Jogando a mão',
+    tutorialBody3: 'Cada mão tem até 3 rodadas. Quem vence 2 rodadas leva a mão. Empate na primeira rodada é decidido pela segunda; se tudo empatar, ninguém pontua.',
+    tutorialTitle4: 'Truco e apostas',
+    tutorialBody4: 'A mão vale 2 pontos. Peça Truco para subir a aposta: Truco (4), Seis (6), Dez (10) e Doze (12). Seu oponente pode aceitar, aumentar ou correr.',
+    tutorialTitle5: 'Vencendo a partida',
+    tutorialBody5: 'O primeiro jogador a alcançar 12 pontos vence a partida. Depois, é só jogar de novo!',
   },
   en: {
     subtitle: 'Invite a friend and play',
@@ -84,6 +104,20 @@ export const translations: Record<Language, Dict> = {
     betSix: 'Six',
     betTen: 'Ten',
     betTwelve: 'Twelve',
+    tutorialButton: 'Tutorial',
+    tutorialNext: 'Next',
+    tutorialPrevious: 'Previous',
+    tutorialDone: 'Done',
+    tutorialTitle1: 'Objective',
+    tutorialBody1: 'Two players race to 12 points. Each hand, you are dealt 3 cards.',
+    tutorialTitle2: 'Card ranking',
+    tutorialBody2: 'Manilhas rule: 4 of clubs (zap), 7 of hearts (copeta), Ace of spades (espadilha), and 7 of diamonds (pica-fumo), strongest to weakest. Other cards rank: 3, 2, A, K, J, Q, 7, 6, 5, 4.',
+    tutorialTitle3: 'Playing a hand',
+    tutorialBody3: 'Each hand has up to 3 rounds. Win 2 rounds to take the hand. A tie in round one is settled by round two; if every round ties, no one scores.',
+    tutorialTitle4: 'Truco and betting',
+    tutorialBody4: 'A hand starts at 2 points. Call Truco to raise the stakes: Truco (4), Six (6), Ten (10), Twelve (12). Your opponent can accept, raise, or fold.',
+    tutorialTitle5: 'Winning the match',
+    tutorialBody5: 'The first player to reach 12 points wins the match. Then just play again!',
   },
   es: {
     subtitle: 'Invita a un amigo y juega',
@@ -119,5 +153,19 @@ export const translations: Record<Language, Dict> = {
     betSix: 'Seis',
     betTen: 'Diez',
     betTwelve: 'Doce',
+    tutorialButton: 'Tutorial',
+    tutorialNext: 'Siguiente',
+    tutorialPrevious: 'Anterior',
+    tutorialDone: 'Listo',
+    tutorialTitle1: 'Objetivo',
+    tutorialBody1: 'Dos jugadores compiten hasta 12 puntos. En cada mano reciben 3 cartas.',
+    tutorialTitle2: 'Fuerza de las cartas',
+    tutorialBody2: 'Las manilhas mandan: 4 de tréboles (zap), 7 de corazones (copeta), As de espadas (espadilha) y 7 de diamantes (pica-fumo), de más fuerte a más débil. Las demás cartas siguen: 3, 2, A, K, J, Q, 7, 6, 5, 4.',
+    tutorialTitle3: 'Jugando la mano',
+    tutorialBody3: 'Cada mano tiene hasta 3 rondas. Quien gane 2 rondas se lleva la mano. Un empate en la primera ronda lo decide la segunda; si todo empata, nadie puntúa.',
+    tutorialTitle4: 'Truco y apuestas',
+    tutorialBody4: 'La mano vale 2 puntos. Pide Truco para subir la apuesta: Truco (4), Seis (6), Diez (10) y Doce (12). Tu oponente puede aceptar, subir o correr.',
+    tutorialTitle5: 'Ganando la partida',
+    tutorialBody5: 'El primer jugador en llegar a 12 puntos gana la partida. ¡Después, solo queda jugar de nuevo!',
   },
 };
