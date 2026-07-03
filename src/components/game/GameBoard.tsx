@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
-import { useGameActions, requestRematch } from '@/hooks/useGameActions';
+import { useGameActions, requestRematch, fetchPublicState } from '@/hooks/useGameActions';
 import { useSoloGame } from '@/hooks/useSoloGame';
 import { canCallTruco } from '@/engine/betting';
 import { useLanguage } from '@/lib/LanguageContext';
@@ -14,7 +14,7 @@ import { BettingPanel } from './BettingPanel';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Toast } from '@/components/ui/Toast';
-import type { Seat, Trick } from '@/engine/types';
+import type { PublicGameState, Seat, Trick } from '@/engine/types';
 
 interface GameBoardProps {
   gameId: string;
@@ -23,7 +23,7 @@ interface GameBoardProps {
 }
 
 export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
-  const { publicState, myHand, mySeat, isConnected } = useGameStore();
+  const { publicState, myHand, mySeat, isConnected, setPublicState } = useGameStore();
   const onlineActions = useGameActions(gameId, token, mySeat);
   const soloActions = useSoloGame(mode === 'solo', token);
   const actions = mode === 'solo' ? soloActions : onlineActions;
@@ -31,6 +31,14 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
   const navigate = useNavigate();
   const [toast, setToast] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  // Mirrors actionPending for reads inside long-delayed setTimeout closures (e.g. the
+  // hand-over auto-advance below): a setTimeout scheduled by an effect captures whatever
+  // actionPending was at the time the effect ran, not the value at the time it fires. If
+  // that render happened to catch actionPending mid-flight true (zustand's
+  // useSyncExternalStore can force a synchronous re-render inside apply(), before doAction's
+  // own finally block resets it), the stale closure would see actionPending=true forever
+  // and silently skip startNextHand — freezing the game on the hand-over screen.
+  const actionPendingRef = useRef(false);
   const [creatingGame, setCreatingGame] = useState(false);
 
   // Freeze the last completed trick for 3 seconds to show the winner highlight.
@@ -115,7 +123,8 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
   }
 
   async function doAction(fn: () => Promise<unknown>, successMsg?: string) {
-    if (actionPending) return;
+    if (actionPendingRef.current) return;
+    actionPendingRef.current = true;
     setActionPending(true);
     try {
       await fn();
@@ -124,17 +133,36 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
       const msg = err instanceof Error ? err.message : 'Erro';
       showToast(msg);
     } finally {
+      actionPendingRef.current = false;
       setActionPending(false);
     }
   }
 
   useEffect(() => {
-    if (isHandOver && !isMatchOver) {
-      const t = setTimeout(() => {
-        void doAction(() => actions.startNextHand());
-      }, 2200);
-      return () => clearTimeout(t);
-    }
+    if (!isHandOver || isMatchOver) return;
+
+    const advanceTimer = setTimeout(() => {
+      void doAction(() => actions.startNextHand());
+    }, 2200);
+
+    // Reconciliation fallback: both players independently trigger this advance,
+    // so we may lose the race (our request errors once the other player already
+    // advanced), or the realtime broadcast confirming the new hand may simply
+    // never arrive. Either way, without this the client is stuck showing "hand
+    // over" forever. Fetch the authoritative state directly once we've given
+    // the primary path a chance to land.
+    const reconcileTimer = mode === 'online'
+      ? setTimeout(() => {
+          void fetchPublicState(gameId).then((state) => {
+            if (state) setPublicState(state as PublicGameState);
+          });
+        }, 3600)
+      : null;
+
+    return () => {
+      clearTimeout(advanceTimer);
+      if (reconcileTimer) clearTimeout(reconcileTimer);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHandOver, isMatchOver]);
 
