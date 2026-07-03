@@ -37,7 +37,7 @@ function aiNextAction(state: GameState): GameAction | null {
     return { type: 'ACCEPT_BET', seat: 'player2' };
   }
   if (hand.phase === 'playing' && hand.currentTurn === 'player2') {
-    if (shouldCallTruco(aiHand) && canCallTruco(hand.bet, 'player2')) {
+    if (shouldCallTruco(aiHand) && canCallTruco(hand.bet, 'player2', state.score)) {
       return { type: 'CALL_TRUCO', seat: 'player2' };
     }
     const card = chooseCardToPlay(aiHand, hand.currentTrick, 'player2');
@@ -56,7 +56,7 @@ function humanAction(state: GameState, turnCount: number): GameAction | null {
   }
   if (hand.phase === 'playing' && hand.currentTurn === 'player1') {
     // every 7th human turn, call truco if legal, to exercise the human-initiated bet path
-    if (turnCount % 7 === 0 && canCallTruco(hand.bet, 'player1')) {
+    if (turnCount % 7 === 0 && canCallTruco(hand.bet, 'player1', state.score)) {
       return { type: 'CALL_TRUCO', seat: 'player1' };
     }
     return { type: 'PLAY_CARD', seat: 'player1', cardId: myHand[0].id };

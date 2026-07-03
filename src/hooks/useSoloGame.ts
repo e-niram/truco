@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { gameReducer, derivePublicState } from '@/engine/gameReducer';
 import { canCallTruco } from '@/engine/betting';
+import { isIronHand } from '@/engine/matchRules';
 import { chooseCardToPlay, decideBetResponse, shouldCallTruco } from '@/engine/ai';
 import type { GameAction, GameState } from '@/engine/types';
 
@@ -41,10 +42,13 @@ function aiNextAction(state: GameState): GameAction | null {
   }
 
   if (hand.phase === 'playing' && hand.currentTurn === 'player2') {
-    if (shouldCallTruco(aiHand) && canCallTruco(hand.bet, 'player2')) {
+    if (shouldCallTruco(aiHand) && canCallTruco(hand.bet, 'player2', state.score)) {
       return { type: 'CALL_TRUCO', seat: 'player2' };
     }
-    const card = chooseCardToPlay(aiHand, hand.currentTrick, 'player2');
+    // Mão de ferro: the AI can't see its own hand either, so it plays a blind (random) card.
+    const card = isIronHand(state.score)
+      ? aiHand[Math.floor(Math.random() * aiHand.length)]
+      : chooseCardToPlay(aiHand, hand.currentTrick, 'player2');
     return { type: 'PLAY_CARD', seat: 'player2', cardId: card.id };
   }
 

@@ -180,6 +180,54 @@ describe('Score tracking', () => {
   });
 });
 
+describe('Mão de 10 / mão de ferro', () => {
+  function playingStateWithScore(score: { player1: number; player2: number }): GameState {
+    const state = gameReducer(stateWithBothPlayers(), { type: 'DEAL_HAND' });
+    return { ...state, score };
+  }
+
+  it('starts the next hand at 4 points once a player reaches 10 (mão de 10)', () => {
+    const dealt = playingStateWithScore({ player1: 10, player2: 4 });
+    const handOver: GameState = {
+      ...dealt,
+      currentHand: { ...dealt.currentHand!, phase: 'handOver', winner: 'player2' },
+    };
+    const next = gameReducer(handOver, { type: 'START_NEXT_HAND' });
+    expect(next.currentHand?.pointsAtStake).toBe(4);
+  });
+
+  it('starts the next hand at 4 points when both players reach 10 (mão de ferro)', () => {
+    const dealt = playingStateWithScore({ player1: 10, player2: 10 });
+    const handOver: GameState = {
+      ...dealt,
+      currentHand: { ...dealt.currentHand!, phase: 'handOver', winner: 'player1' },
+    };
+    const next = gameReducer(handOver, { type: 'START_NEXT_HAND' });
+    expect(next.currentHand?.pointsAtStake).toBe(4);
+  });
+
+  it('forfeits the match for whoever calls truco during mão de 10', () => {
+    const state = playingStateWithScore({ player1: 10, player2: 6 });
+    const after = gameReducer(state, { type: 'CALL_TRUCO', seat: 'player2' });
+    expect(after.phase).toBe('finished');
+    expect(after.currentHand?.phase).toBe('matchOver');
+    expect(after.currentHand?.winner).toBe('player1');
+  });
+
+  it('forfeits the match for whoever calls truco during mão de ferro', () => {
+    const state = playingStateWithScore({ player1: 10, player2: 10 });
+    const after = gameReducer(state, { type: 'CALL_TRUCO', seat: 'player1' });
+    expect(after.phase).toBe('finished');
+    expect(after.currentHand?.winner).toBe('player2');
+  });
+
+  it('still allows normal truco calls below 10 points', () => {
+    const state = playingStateWithScore({ player1: 8, player2: 6 });
+    const after = gameReducer(state, { type: 'CALL_TRUCO', seat: 'player1' });
+    expect(after.currentHand?.phase).toBe('betting');
+  });
+});
+
 describe('derivePublicState', () => {
   it('excludes player hands from public state', () => {
     const state = gameReducer(stateWithBothPlayers(), { type: 'DEAL_HAND' });

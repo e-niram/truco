@@ -18,6 +18,7 @@ import {
   canCallTruco,
   canRaiseBet,
 } from './betting.ts';
+import { isTenHand, startingPointsAtStake } from './matchRules.ts';
 
 export class GameError extends Error {}
 
@@ -29,7 +30,7 @@ function emptyTrick(roundNumber: 1 | 2 | 3): Trick {
   return { roundNumber, player1Card: null, player2Card: null, winner: null };
 }
 
-function newHand(handNumber: number, firstTurn: Seat): Hand {
+function newHand(handNumber: number, firstTurn: Seat, score: GameState['score']): Hand {
   return {
     handNumber,
     tricks: [],
@@ -39,7 +40,7 @@ function newHand(handNumber: number, firstTurn: Seat): Hand {
     phase: 'dealing',
     bet: initialBetState(),
     winner: null,
-    pointsAtStake: 2,
+    pointsAtStake: startingPointsAtStake(score),
   };
 }
 
@@ -60,7 +61,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         players: newPlayers,
         phase: bothJoined ? 'active' : 'waiting',
         currentHand: bothJoined
-          ? newHand(1, 'player1')
+          ? newHand(1, 'player1', state.score)
           : state.currentHand,
         version: state.version + 1,
       };
@@ -191,7 +192,19 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const hand = state.currentHand;
       if (!hand) throw new GameError('No active hand');
       if (hand.phase !== 'playing') throw new GameError('Not in playing phase');
-      if (!canCallTruco(hand.bet, seat)) throw new GameError('Cannot call truco now');
+
+      if (isTenHand(state.score)) {
+        // Mão de 10 / mão de ferro: truco can never be called once either player
+        // has reached 10 points. Calling it anyway forfeits the match on the spot.
+        return {
+          ...state,
+          phase: 'finished',
+          currentHand: { ...hand, phase: 'matchOver', winner: opponent(seat) },
+          version: state.version + 1,
+        };
+      }
+
+      if (!canCallTruco(hand.bet, seat, state.score)) throw new GameError('Cannot call truco now');
 
       const newBet = applyCallTruco(hand.bet, seat);
       return {
@@ -279,7 +292,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       return {
         ...state,
-        currentHand: newHand(nextHandNumber, nextFirst),
+        currentHand: newHand(nextHandNumber, nextFirst, state.score),
         handHistory: [...state.handHistory, hand],
         version: state.version + 1,
       };

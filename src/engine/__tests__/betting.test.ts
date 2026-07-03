@@ -10,6 +10,8 @@ import {
   nextBetLevel,
 } from '../betting.ts';
 
+const NO_SCORE = { player1: 0, player2: 0 };
+
 describe('nextBetLevel', () => {
   it('follows the escalation sequence', () => {
     expect(nextBetLevel(2)).toBe(4);
@@ -23,17 +25,28 @@ describe('nextBetLevel', () => {
 describe('canCallTruco', () => {
   it('allows calling when no bet is pending', () => {
     const bet = initialBetState();
-    expect(canCallTruco(bet, 'player1')).toBe(true);
+    expect(canCallTruco(bet, 'player1', NO_SCORE)).toBe(true);
   });
 
   it('disallows calling when a bet is already pending', () => {
     const bet = { ...initialBetState(), status: 'pending' as const, pendingLevel: 4 as const, calledBy: 'player1' as const };
-    expect(canCallTruco(bet, 'player2')).toBe(false);
+    expect(canCallTruco(bet, 'player2', NO_SCORE)).toBe(false);
   });
 
   it('disallows calling when already at max level', () => {
     const bet = { ...initialBetState(), currentLevel: 12 as const, status: 'accepted' as const };
-    expect(canCallTruco(bet, 'player1')).toBe(false);
+    expect(canCallTruco(bet, 'player1', NO_SCORE)).toBe(false);
+  });
+
+  it('disallows calling once either player has reached 10 points (mão de 10)', () => {
+    const bet = initialBetState();
+    expect(canCallTruco(bet, 'player1', { player1: 10, player2: 4 })).toBe(false);
+    expect(canCallTruco(bet, 'player1', { player1: 4, player2: 10 })).toBe(false);
+  });
+
+  it('disallows calling in mão de ferro (both players at 10)', () => {
+    const bet = initialBetState();
+    expect(canCallTruco(bet, 'player1', { player1: 10, player2: 10 })).toBe(false);
   });
 });
 
