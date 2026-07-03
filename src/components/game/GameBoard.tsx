@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/store/gameStore';
 import { useGameActions, requestRematch } from '@/hooks/useGameActions';
+import { useSoloGame } from '@/hooks/useSoloGame';
 import { canCallTruco } from '@/engine/betting';
 import { useLanguage } from '@/lib/LanguageContext';
 import { TopBar } from './TopBar';
@@ -18,11 +19,14 @@ import type { Seat, Trick } from '@/engine/types';
 interface GameBoardProps {
   gameId: string;
   token: string;
+  mode?: 'online' | 'solo';
 }
 
-export function GameBoard({ gameId, token }: GameBoardProps) {
+export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
   const { publicState, myHand, mySeat, isConnected } = useGameStore();
-  const actions = useGameActions(gameId, token, mySeat);
+  const onlineActions = useGameActions(gameId, token, mySeat);
+  const soloActions = useSoloGame(mode === 'solo', token);
+  const actions = mode === 'solo' ? soloActions : onlineActions;
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [toast, setToast] = useState<string | null>(null);
@@ -294,8 +298,13 @@ export function GameBoard({ gameId, token }: GameBoardProps) {
                 if (creatingGame) return;
                 setCreatingGame(true);
                 try {
-                  const newId = await requestRematch(gameId, token);
-                  navigate(`/game/${newId}`);
+                  if (mode === 'solo') {
+                    soloActions.restart();
+                    setCreatingGame(false);
+                  } else {
+                    const newId = await requestRematch(gameId, token);
+                    navigate(`/game/${newId}`);
+                  }
                 } catch (err) {
                   const msg = err instanceof Error ? err.message : 'Erro';
                   showToast(msg);

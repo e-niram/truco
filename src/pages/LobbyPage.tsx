@@ -57,6 +57,9 @@ export function LobbyPage() {
             <Button onClick={handleCreate} disabled={loading}>
               {loading ? t('creating') : t('newGame')}
             </Button>
+            <Button variant="ghost" onClick={() => navigate('/solo')}>
+              {t('playSolo')}
+            </Button>
             <Button variant="ghost" onClick={() => setTutorialOpen(true)}>
               {t('tutorialButton')}
             </Button>

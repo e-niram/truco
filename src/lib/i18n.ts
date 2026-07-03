@@ -11,6 +11,7 @@ export type TranslationKey =
   | 'gameOver' | 'youWon' | 'opponentWon' | 'playAgain' | 'backToStart'
   | 'opp' | 'you' | 'hand'
   | 'betTruco' | 'betSix' | 'betTen' | 'betTwelve'
+  | 'playSolo'
   | 'tutorialButton' | 'tutorialNext' | 'tutorialPrevious' | 'tutorialDone'
   | 'tutorialTitle1' | 'tutorialBody1'
   | 'tutorialTitle2' | 'tutorialBody2'
@@ -55,6 +56,7 @@ export const translations: Record<Language, Dict> = {
     betSix: 'Seis',
     betTen: 'Dez',
     betTwelve: 'Doze',
+    playSolo: 'Jogar sozinho',
     tutorialButton: 'Tutorial',
     tutorialNext: 'Próximo',
     tutorialPrevious: 'Anterior',
@@ -104,6 +106,7 @@ export const translations: Record<Language, Dict> = {
     betSix: 'Six',
     betTen: 'Ten',
     betTwelve: 'Twelve',
+    playSolo: 'Play solo',
     tutorialButton: 'Tutorial',
     tutorialNext: 'Next',
     tutorialPrevious: 'Previous',
@@ -153,6 +156,7 @@ export const translations: Record<Language, Dict> = {
     betSix: 'Seis',
     betTen: 'Diez',
     betTwelve: 'Doce',
+    playSolo: 'Jugar solo',
     tutorialButton: 'Tutorial',
     tutorialNext: 'Siguiente',
     tutorialPrevious: 'Anterior',
