@@ -209,7 +209,16 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
                     ? t('opponentWonHand')
                     : t('tie')}
                 </p>
-                <p style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px' }}>
+                <p style={{
+                  fontSize: '26px',
+                  fontWeight: 800,
+                  marginTop: '4px',
+                  color: hand.winner === mySeat
+                    ? 'var(--color-accent)'
+                    : hand.winner
+                    ? 'var(--color-secondary)'
+                    : undefined,
+                }}>
                   +{hand.pointsAtStake} pts
                 </p>
               </motion.div>
