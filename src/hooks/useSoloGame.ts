@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { gameReducer, derivePublicState } from '@/engine/gameReducer';
 import { canCallTruco } from '@/engine/betting';
-import { chooseCardToPlay, decideBetResponse, shouldCallTruco } from '@/engine/ai';
+import { isIronHand, tenHandDecider } from '@/engine/matchRules';
+import { chooseCardToPlay, decideBetResponse, shouldCallTruco, shouldPlayTenHand } from '@/engine/ai';
 import type { GameAction, GameState } from '@/engine/types';
 
 const AI_TOKEN = 'ai';
@@ -40,11 +41,18 @@ function aiNextAction(state: GameState): GameAction | null {
     return { type: 'ACCEPT_BET', seat: 'player2' };
   }
 
+  if (hand.phase === 'deciding' && tenHandDecider(state.score) === 'player2') {
+    return { type: shouldPlayTenHand(aiHand) ? 'PLAY_TEN_HAND' : 'RUN_TEN_HAND', seat: 'player2' };
+  }
+
   if (hand.phase === 'playing' && hand.currentTurn === 'player2') {
-    if (shouldCallTruco(aiHand) && canCallTruco(hand.bet, 'player2')) {
+    if (shouldCallTruco(aiHand) && canCallTruco(hand.bet, 'player2', state.score)) {
       return { type: 'CALL_TRUCO', seat: 'player2' };
     }
-    const card = chooseCardToPlay(aiHand, hand.currentTrick, 'player2');
+    // Mão de ferro: the AI can't see its own hand either, so it plays a blind (random) card.
+    const card = isIronHand(state.score)
+      ? aiHand[Math.floor(Math.random() * aiHand.length)]
+      : chooseCardToPlay(aiHand, hand.currentTrick, 'player2');
     return { type: 'PLAY_CARD', seat: 'player2', cardId: card.id };
   }
 
@@ -110,6 +118,8 @@ export function useSoloGame(enabled: boolean, myToken: string) {
     raiseBet: async () => apply({ type: 'RAISE_BET', seat: 'player1' }),
     acceptBet: async () => apply({ type: 'ACCEPT_BET', seat: 'player1' }),
     rejectBet: async () => apply({ type: 'REJECT_BET', seat: 'player1' }),
+    playTenHand: async () => apply({ type: 'PLAY_TEN_HAND', seat: 'player1' }),
+    runTenHand: async () => apply({ type: 'RUN_TEN_HAND', seat: 'player1' }),
     startNextHand: async () => apply({ type: 'START_NEXT_HAND' }),
     reconnect: async () => {},
     joinGame: async () => {},

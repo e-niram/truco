@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { gameReducer } from '../gameReducer.ts';
 import { canCallTruco } from '../betting.ts';
-import { chooseCardToPlay, decideBetResponse, shouldCallTruco } from '../ai.ts';
+import { chooseCardToPlay, decideBetResponse, shouldCallTruco, shouldPlayTenHand } from '../ai.ts';
+import { tenHandDecider } from '../matchRules.ts';
 import type { GameAction, GameState } from '../types.ts';
 
 // Mirrors useSoloGame's aiNextAction + autoDeal + apply loop, but synchronous —
@@ -36,8 +37,11 @@ function aiNextAction(state: GameState): GameAction | null {
     if (response === 'raise') return { type: 'RAISE_BET', seat: 'player2' };
     return { type: 'ACCEPT_BET', seat: 'player2' };
   }
+  if (hand.phase === 'deciding' && tenHandDecider(state.score) === 'player2') {
+    return { type: shouldPlayTenHand(aiHand) ? 'PLAY_TEN_HAND' : 'RUN_TEN_HAND', seat: 'player2' };
+  }
   if (hand.phase === 'playing' && hand.currentTurn === 'player2') {
-    if (shouldCallTruco(aiHand) && canCallTruco(hand.bet, 'player2')) {
+    if (shouldCallTruco(aiHand) && canCallTruco(hand.bet, 'player2', state.score)) {
       return { type: 'CALL_TRUCO', seat: 'player2' };
     }
     const card = chooseCardToPlay(aiHand, hand.currentTrick, 'player2');
@@ -54,9 +58,13 @@ function humanAction(state: GameState, turnCount: number): GameAction | null {
   if (hand.phase === 'betting' && hand.bet.status === 'pending' && hand.bet.calledBy !== 'player1') {
     return { type: 'ACCEPT_BET', seat: 'player1' };
   }
+  if (hand.phase === 'deciding' && tenHandDecider(state.score) === 'player1') {
+    // alternate between playing and running to exercise both mão de 10 paths
+    return { type: turnCount % 2 === 0 ? 'PLAY_TEN_HAND' : 'RUN_TEN_HAND', seat: 'player1' };
+  }
   if (hand.phase === 'playing' && hand.currentTurn === 'player1') {
     // every 7th human turn, call truco if legal, to exercise the human-initiated bet path
-    if (turnCount % 7 === 0 && canCallTruco(hand.bet, 'player1')) {
+    if (turnCount % 7 === 0 && canCallTruco(hand.bet, 'player1', state.score)) {
       return { type: 'CALL_TRUCO', seat: 'player1' };
     }
     return { type: 'PLAY_CARD', seat: 'player1', cardId: myHand[0].id };

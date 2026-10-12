@@ -99,6 +99,9 @@ Player 2 hand only"]
 - Fixed manilhas (strongest to weakest): **4♣ > 7♥ > A♠ > 7♦**
 - Card rank (non-manilha): **3 > 2 > A > K > J > Q > 7 > 6 > 5 > 4**
 - Hand starts at 2 points; betting escalates: Truco (4) → Seis (6) → Dez (10) → Doze (12)
+- The lead alternates every hand; the winner of a round leads the next one
+- **Mão de 10** (one player at 10): that player looks at their cards and either plays the hand for 4 points or runs, giving the opponent 2. Truco is forbidden — calling it gives the opponent 4 points
+- **Mão de ferro** (both at 10): played blind, no truco; the winner of the hand wins the match
 - First to **12 points** wins the match
 
 ---

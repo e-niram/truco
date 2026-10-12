@@ -8,6 +8,7 @@ interface TopBarProps {
   tricks: Trick[];
   currentRound: 1 | 2 | 3;
   pointsAtStake: number;
+  handRule?: 'normal' | 'ten' | 'iron';
 }
 
 function RoundDots({
@@ -138,6 +139,7 @@ export function TopBar({
   tricks,
   currentRound,
   pointsAtStake,
+  handRule = 'normal',
 }: TopBarProps) {
   const { t } = useLanguage();
   const myScore = mySeat ? scores[mySeat] : scores.player1;
@@ -147,6 +149,7 @@ export function TopBar({
   const isMyTurn = currentTurn !== null && currentTurn === mySeat;
   const isTheirTurn = currentTurn !== null && currentTurn !== mySeat;
   const stakesElevated = pointsAtStake > 2;
+  const handLabel = handRule === 'iron' ? t('ironHandLabel') : handRule === 'ten' ? t('tenHandLabel') : t('hand');
 
   return (
     <div
@@ -186,10 +189,11 @@ export function TopBar({
             fontSize: '8px',
             fontWeight: 700,
             letterSpacing: '0.12em',
-            color: 'rgba(255,255,255,0.2)',
+            color: handRule === 'normal' ? 'rgba(255,255,255,0.2)' : 'var(--color-accent)',
+            whiteSpace: 'nowrap',
           }}
         >
-          {t('hand')}
+          {handLabel}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <RoundDots tricks={tricks} currentRound={currentRound} mySeat={mySeat} />

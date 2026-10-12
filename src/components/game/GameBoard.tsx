@@ -5,6 +5,7 @@ import { useGameStore } from '@/store/gameStore';
 import { useGameActions, requestRematch, fetchPublicState } from '@/hooks/useGameActions';
 import { useSoloGame } from '@/hooks/useSoloGame';
 import { canCallTruco } from '@/engine/betting';
+import { isIronHand, isTenHand, tenHandDecider, TEN_HAND_RUN_POINTS } from '@/engine/matchRules';
 import { useLanguage } from '@/lib/LanguageContext';
 import { TopBar } from './TopBar';
 import { Card } from '@/components/cards/Card';
@@ -56,7 +57,13 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
   const isBetting = hand?.phase === 'betting';
   const isHandOver = hand?.phase === 'handOver';
   const isMatchOver = publicState?.phase === 'finished' || hand?.phase === 'matchOver';
-  const canCallBet = Boolean(mySeat && bet && canCallTruco(bet, mySeat) && hand?.phase === 'playing');
+  const canCallBet = Boolean(
+    mySeat && bet && publicState && canCallTruco(bet, mySeat, publicState.score) && hand?.phase === 'playing',
+  );
+  const ironHandActive = Boolean(publicState && isIronHand(publicState.score));
+  // Mão de 10: the player at 10 chooses to play or run before any card is played
+  const isDeciding = hand?.phase === 'deciding';
+  const isMyDecision = Boolean(isDeciding && publicState && mySeat && tenHandDecider(publicState.score) === mySeat);
 
   const opponentSeat: Seat = mySeat === 'player1' ? 'player2' : 'player1';
   const opponentCardCount = publicState?.players[opponentSeat]?.cardCount ?? 0;
@@ -192,6 +199,7 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
         tricks={hand?.tricks ?? []}
         currentRound={hand ? ((hand.tricks.length + 1) as 1 | 2 | 3) : 1}
         pointsAtStake={hand?.pointsAtStake ?? 2}
+        handRule={ironHandActive ? 'iron' : isTenHand(publicState.score) ? 'ten' : 'normal'}
       />
 
       {/* Main play area — flat anchor+spacer layout */}
@@ -225,6 +233,7 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
           <AnimatePresence>
             {isHandOver && !isMatchOver && hand && (
               <motion.div
+                key="hand-result"
                 initial={{ opacity: 0, scale: 0.9, y: 6 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 6 }}
@@ -249,6 +258,29 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
                 }}>
                   +{hand.pointsAtStake} pts
                 </p>
+              </motion.div>
+            )}
+            {isDeciding && hand && (
+              <motion.div
+                key="ten-hand-decision"
+                initial={{ opacity: 0, scale: 0.9, y: 6 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 6 }}
+                style={resultOverlayStyle}
+              >
+                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.62)' }}>
+                  {isMyDecision ? t('tenHandPrompt') : t('opponentDeciding')}
+                </p>
+                {isMyDecision && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+                    <Button onClick={() => doAction(() => actions.playTenHand())} disabled={actionPending}>
+                      {t('tenHandPlay', { value: hand.pointsAtStake })}
+                    </Button>
+                    <Button variant="danger" onClick={() => doAction(() => actions.runTenHand())} disabled={actionPending}>
+                      {t('fold', { value: TEN_HAND_RUN_POINTS })}
+                    </Button>
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -304,6 +336,7 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
             <PlayerHand
               hand={myHand}
               isMyTurn={isMyTurn}
+              blind={ironHandActive}
               onPlayCard={(cardId) => doAction(() => actions.playCard(cardId))}
             />
           </div>
@@ -325,9 +358,7 @@ export function GameBoard({ gameId, token, mode = 'online' }: GameBoardProps) {
       <Modal open={isMatchOver}>
         <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <p style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.02em' }}>
-            {publicState.score.player1 >= 12
-              ? mySeat === 'player1' ? t('youWon') : t('opponentWon')
-              : mySeat === 'player2' ? t('youWon') : t('opponentWon')}
+            {hand?.winner === mySeat ? t('youWon') : t('opponentWon')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <Button

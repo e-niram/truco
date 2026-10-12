@@ -18,6 +18,13 @@ import {
   canCallTruco,
   canRaiseBet,
 } from './betting.ts';
+import {
+  isTenHand,
+  tenHandDecider,
+  startingPointsAtStake,
+  TEN_HAND_RUN_POINTS,
+  TEN_HAND_TRUCO_PENALTY,
+} from './matchRules.ts';
 
 export class GameError extends Error {}
 
@@ -29,7 +36,7 @@ function emptyTrick(roundNumber: 1 | 2 | 3): Trick {
   return { roundNumber, player1Card: null, player2Card: null, winner: null };
 }
 
-function newHand(handNumber: number, firstTurn: Seat): Hand {
+function newHand(handNumber: number, firstTurn: Seat, score: GameState['score']): Hand {
   return {
     handNumber,
     tricks: [],
@@ -39,7 +46,7 @@ function newHand(handNumber: number, firstTurn: Seat): Hand {
     phase: 'dealing',
     bet: initialBetState(),
     winner: null,
-    pointsAtStake: 2,
+    pointsAtStake: startingPointsAtStake(score),
   };
 }
 
@@ -60,7 +67,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         players: newPlayers,
         phase: bothJoined ? 'active' : 'waiting',
         currentHand: bothJoined
-          ? newHand(1, 'player1')
+          ? newHand(1, 'player1', state.score)
           : state.currentHand,
         version: state.version + 1,
       };
@@ -83,7 +90,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             ? { ...state.players.player2, hand: hand2 }
             : null,
         },
-        currentHand: { ...state.currentHand, phase: 'playing' },
+        // Mão de 10: the player at 10 first decides whether to play or run
+        currentHand: {
+          ...state.currentHand,
+          phase: tenHandDecider(state.score) ? 'deciding' : 'playing',
+        },
         version: state.version + 1,
       };
     }
@@ -186,12 +197,80 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
 
+    case 'PLAY_TEN_HAND': {
+      const { seat } = action;
+      const hand = state.currentHand;
+      if (!hand) throw new GameError('No active hand');
+      if (hand.phase !== 'deciding') throw new GameError('Nothing to decide');
+      if (tenHandDecider(state.score) !== seat) throw new GameError('Not your decision');
+
+      return {
+        ...state,
+        currentHand: { ...hand, phase: 'playing' },
+        version: state.version + 1,
+      };
+    }
+
+    case 'RUN_TEN_HAND': {
+      const { seat } = action;
+      const hand = state.currentHand;
+      if (!hand) throw new GameError('No active hand');
+      if (hand.phase !== 'deciding') throw new GameError('Nothing to decide');
+      if (tenHandDecider(state.score) !== seat) throw new GameError('Not your decision');
+
+      // Running from a mão de 10 hands the opponent 2 points without play
+      const winner = opponent(seat);
+      const newScore = {
+        ...state.score,
+        [winner]: state.score[winner] + TEN_HAND_RUN_POINTS,
+      };
+      const matchOver = newScore.player1 >= 12 || newScore.player2 >= 12;
+
+      return {
+        ...state,
+        phase: matchOver ? 'finished' : state.phase,
+        score: newScore,
+        currentHand: {
+          ...hand,
+          phase: matchOver ? 'matchOver' : 'handOver',
+          winner,
+          pointsAtStake: TEN_HAND_RUN_POINTS,
+        },
+        version: state.version + 1,
+      };
+    }
+
     case 'CALL_TRUCO': {
       const { seat } = action;
       const hand = state.currentHand;
       if (!hand) throw new GameError('No active hand');
       if (hand.phase !== 'playing') throw new GameError('Not in playing phase');
-      if (!canCallTruco(hand.bet, seat)) throw new GameError('Cannot call truco now');
+
+      if (isTenHand(state.score)) {
+        // Mão de 10 / mão de ferro: truco can never be called once either player
+        // has reached 10 points. Calling it anyway ends the hand and hands the
+        // opponent 4 points.
+        const winner = opponent(seat);
+        const newScore = {
+          ...state.score,
+          [winner]: state.score[winner] + TEN_HAND_TRUCO_PENALTY,
+        };
+        const matchOver = newScore.player1 >= 12 || newScore.player2 >= 12;
+        return {
+          ...state,
+          phase: matchOver ? 'finished' : state.phase,
+          score: newScore,
+          currentHand: {
+            ...hand,
+            phase: matchOver ? 'matchOver' : 'handOver',
+            winner,
+            pointsAtStake: TEN_HAND_TRUCO_PENALTY,
+          },
+          version: state.version + 1,
+        };
+      }
+
+      if (!canCallTruco(hand.bet, seat, state.score)) throw new GameError('Cannot call truco now');
 
       const newBet = applyCallTruco(hand.bet, seat);
       return {
@@ -273,13 +352,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (!hand) throw new GameError('No current hand');
       if (hand.phase !== 'handOver') throw new GameError('Hand not over yet');
 
-      // Loser of last hand goes first; on draw, alternate
-      const nextFirst = hand.winner ? opponent(hand.winner) : opponent(hand.firstTurnOfHand);
+      // The deal rotates every hand, so the lead ("mão") alternates
+      const nextFirst = opponent(hand.firstTurnOfHand);
       const nextHandNumber = hand.handNumber + 1;
 
       return {
         ...state,
-        currentHand: newHand(nextHandNumber, nextFirst),
+        currentHand: newHand(nextHandNumber, nextFirst, state.score),
         handHistory: [...state.handHistory, hand],
         version: state.version + 1,
       };

@@ -35,6 +35,11 @@ export function shouldCallTruco(hand: Card[]): boolean {
   return estimateHandStrength(hand) === 'strong';
 }
 
+// Mão de 10: play for 4 points unless the hand is too weak to be worth the risk.
+export function shouldPlayTenHand(hand: Card[]): boolean {
+  return estimateHandStrength(hand) !== 'weak';
+}
+
 export type BetResponse = 'accept' | 'raise' | 'reject';
 
 export function decideBetResponse(hand: Card[], bet: BetState, seat: Seat = AI_SEAT): BetResponse {

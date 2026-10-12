@@ -15,6 +15,7 @@ const STEPS: { titleKey: TranslationKey; bodyKey: TranslationKey }[] = [
   { titleKey: 'tutorialTitle3', bodyKey: 'tutorialBody3' },
   { titleKey: 'tutorialTitle4', bodyKey: 'tutorialBody4' },
   { titleKey: 'tutorialTitle5', bodyKey: 'tutorialBody5' },
+  { titleKey: 'tutorialTitle6', bodyKey: 'tutorialBody6' },
 ];
 
 export function TutorialModal({ open, onClose }: TutorialModalProps) {

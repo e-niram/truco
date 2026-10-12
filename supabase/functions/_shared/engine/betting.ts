@@ -1,4 +1,5 @@
 import type { BetLevel, BetState, Seat } from './types.ts';
+import { isTenHand, type Score } from './matchRules.ts';
 
 const BET_SEQUENCE: BetLevel[] = [2, 4, 6, 10, 12];
 
@@ -16,7 +17,10 @@ export function nextBetLevel(current: BetLevel): BetLevel | null {
   return idx < BET_SEQUENCE.length - 1 ? BET_SEQUENCE[idx + 1] : null;
 }
 
-export function canCallTruco(bet: BetState, seat: Seat): boolean {
+export function canCallTruco(bet: BetState, seat: Seat, score: Score): boolean {
+  // Truco can never be called once either player has reached 10 points
+  // (mão de 10 / mão de ferro) — calling it anyway hands the opponent 4 points.
+  if (isTenHand(score)) return false;
   // Can only call if: no pending bet, and we didn't call the last one
   if (bet.status === 'pending') return false;
   if (bet.currentLevel === 12) return false;
