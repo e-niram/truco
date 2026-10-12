@@ -148,6 +148,22 @@ export function useGameActions(gameId: string | undefined, token: string, mySeat
     [dispatch, mySeat],
   );
 
+  const playTenHand = useCallback(
+    () => {
+      if (!mySeat) return Promise.reject(new Error('No seat'));
+      return dispatch({ type: 'PLAY_TEN_HAND', seat: mySeat });
+    },
+    [dispatch, mySeat],
+  );
+
+  const runTenHand = useCallback(
+    () => {
+      if (!mySeat) return Promise.reject(new Error('No seat'));
+      return dispatch({ type: 'RUN_TEN_HAND', seat: mySeat });
+    },
+    [dispatch, mySeat],
+  );
+
   const startNextHand = useCallback(
     () => dispatch({ type: 'START_NEXT_HAND' }),
     [dispatch],
@@ -161,7 +177,7 @@ export function useGameActions(gameId: string | undefined, token: string, mySeat
     [dispatch, mySeat, token],
   );
 
-  return { joinGame, playCard, callTruco, raiseBet, acceptBet, rejectBet, startNextHand, reconnect };
+  return { joinGame, playCard, callTruco, raiseBet, acceptBet, rejectBet, playTenHand, runTenHand, startNextHand, reconnect };
 }
 
 // Utility: create a new game via the create-game Edge Function

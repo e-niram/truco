@@ -206,7 +206,16 @@ describe('Mão de 10 / mão de ferro', () => {
     expect(next.currentHand?.pointsAtStake).toBe(4);
   });
 
-  it('forfeits the match for whoever calls truco during mão de 10', () => {
+  it('gives the opponent 4 points when truco is called during mão de 10', () => {
+    const state = playingStateWithScore({ player1: 10, player2: 6 });
+    const after = gameReducer(state, { type: 'CALL_TRUCO', seat: 'player1' });
+    expect(after.score).toEqual({ player1: 10, player2: 10 });
+    expect(after.phase).toBe('active');
+    expect(after.currentHand?.phase).toBe('handOver');
+    expect(after.currentHand?.winner).toBe('player2');
+  });
+
+  it('ends the match when the truco penalty takes the opponent to 12', () => {
     const state = playingStateWithScore({ player1: 10, player2: 6 });
     const after = gameReducer(state, { type: 'CALL_TRUCO', seat: 'player2' });
     expect(after.phase).toBe('finished');
@@ -214,17 +223,71 @@ describe('Mão de 10 / mão de ferro', () => {
     expect(after.currentHand?.winner).toBe('player1');
   });
 
-  it('forfeits the match for whoever calls truco during mão de ferro', () => {
+  it('ends the match when truco is called during mão de ferro', () => {
     const state = playingStateWithScore({ player1: 10, player2: 10 });
     const after = gameReducer(state, { type: 'CALL_TRUCO', seat: 'player1' });
     expect(after.phase).toBe('finished');
     expect(after.currentHand?.winner).toBe('player2');
   });
 
+  function dealtWithScore(score: { player1: number; player2: number }): GameState {
+    const handOver = playingStateWithScore(score);
+    const next = gameReducer(
+      { ...handOver, currentHand: { ...handOver.currentHand!, phase: 'handOver' } },
+      { type: 'START_NEXT_HAND' },
+    );
+    return gameReducer(next, { type: 'DEAL_HAND' });
+  }
+
+  it('makes the player at 10 decide before any card is played', () => {
+    const state = dealtWithScore({ player1: 4, player2: 10 });
+    expect(state.currentHand?.phase).toBe('deciding');
+    const card = state.players.player1!.hand[0];
+    expect(() => gameReducer(state, { type: 'PLAY_CARD', seat: 'player1', cardId: card.id })).toThrow(GameError);
+    expect(() => gameReducer(state, { type: 'PLAY_TEN_HAND', seat: 'player1' })).toThrow(GameError);
+    expect(() => gameReducer(state, { type: 'RUN_TEN_HAND', seat: 'player1' })).toThrow(GameError);
+  });
+
+  it('plays the mão de 10 for 4 points when the player at 10 chooses to play', () => {
+    const state = dealtWithScore({ player1: 4, player2: 10 });
+    const after = gameReducer(state, { type: 'PLAY_TEN_HAND', seat: 'player2' });
+    expect(after.currentHand?.phase).toBe('playing');
+    expect(after.currentHand?.pointsAtStake).toBe(4);
+  });
+
+  it('gives the opponent 2 points when the player at 10 runs', () => {
+    const state = dealtWithScore({ player1: 4, player2: 10 });
+    const after = gameReducer(state, { type: 'RUN_TEN_HAND', seat: 'player2' });
+    expect(after.score).toEqual({ player1: 6, player2: 10 });
+    expect(after.currentHand?.phase).toBe('handOver');
+    expect(after.currentHand?.winner).toBe('player1');
+    expect(after.currentHand?.pointsAtStake).toBe(2);
+  });
+
+  it('skips the decision in a mão de ferro and in normal hands', () => {
+    expect(dealtWithScore({ player1: 10, player2: 10 }).currentHand?.phase).toBe('playing');
+    expect(dealtWithScore({ player1: 8, player2: 6 }).currentHand?.phase).toBe('playing');
+  });
+
   it('still allows normal truco calls below 10 points', () => {
     const state = playingStateWithScore({ player1: 8, player2: 6 });
     const after = gameReducer(state, { type: 'CALL_TRUCO', seat: 'player1' });
     expect(after.currentHand?.phase).toBe('betting');
+  });
+});
+
+describe('Lead rotation', () => {
+  it('alternates who leads each hand regardless of who won', () => {
+    const dealt = gameReducer(stateWithBothPlayers(), { type: 'DEAL_HAND' });
+    expect(dealt.currentHand?.firstTurnOfHand).toBe('player1');
+    for (const winner of ['player1', 'player2', null] as const) {
+      const handOver: GameState = {
+        ...dealt,
+        currentHand: { ...dealt.currentHand!, phase: 'handOver', winner },
+      };
+      const next = gameReducer(handOver, { type: 'START_NEXT_HAND' });
+      expect(next.currentHand?.firstTurnOfHand).toBe('player2');
+    }
   });
 });
 

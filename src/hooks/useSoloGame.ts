@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '@/store/gameStore';
 import { gameReducer, derivePublicState } from '@/engine/gameReducer';
 import { canCallTruco } from '@/engine/betting';
-import { isIronHand } from '@/engine/matchRules';
-import { chooseCardToPlay, decideBetResponse, shouldCallTruco } from '@/engine/ai';
+import { isIronHand, tenHandDecider } from '@/engine/matchRules';
+import { chooseCardToPlay, decideBetResponse, shouldCallTruco, shouldPlayTenHand } from '@/engine/ai';
 import type { GameAction, GameState } from '@/engine/types';
 
 const AI_TOKEN = 'ai';
@@ -39,6 +39,10 @@ function aiNextAction(state: GameState): GameAction | null {
     if (response === 'reject') return { type: 'REJECT_BET', seat: 'player2' };
     if (response === 'raise') return { type: 'RAISE_BET', seat: 'player2' };
     return { type: 'ACCEPT_BET', seat: 'player2' };
+  }
+
+  if (hand.phase === 'deciding' && tenHandDecider(state.score) === 'player2') {
+    return { type: shouldPlayTenHand(aiHand) ? 'PLAY_TEN_HAND' : 'RUN_TEN_HAND', seat: 'player2' };
   }
 
   if (hand.phase === 'playing' && hand.currentTurn === 'player2') {
@@ -114,6 +118,8 @@ export function useSoloGame(enabled: boolean, myToken: string) {
     raiseBet: async () => apply({ type: 'RAISE_BET', seat: 'player1' }),
     acceptBet: async () => apply({ type: 'ACCEPT_BET', seat: 'player1' }),
     rejectBet: async () => apply({ type: 'REJECT_BET', seat: 'player1' }),
+    playTenHand: async () => apply({ type: 'PLAY_TEN_HAND', seat: 'player1' }),
+    runTenHand: async () => apply({ type: 'RUN_TEN_HAND', seat: 'player1' }),
     startNextHand: async () => apply({ type: 'START_NEXT_HAND' }),
     reconnect: async () => {},
     joinGame: async () => {},

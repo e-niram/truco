@@ -19,7 +19,7 @@ export function nextBetLevel(current: BetLevel): BetLevel | null {
 
 export function canCallTruco(bet: BetState, seat: Seat, score: Score): boolean {
   // Truco can never be called once either player has reached 10 points
-  // (mão de 10 / mão de ferro) — calling it anyway forfeits the match.
+  // (mão de 10 / mão de ferro) — calling it anyway hands the opponent 4 points.
   if (isTenHand(score)) return false;
   // Can only call if: no pending bet, and we didn't call the last one
   if (bet.status === 'pending') return false;

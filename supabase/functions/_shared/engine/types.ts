@@ -6,7 +6,7 @@ export type Seat = 'player1' | 'player2';
 
 export type BetLevel = 2 | 4 | 6 | 10 | 12;
 
-export type HandPhase = 'dealing' | 'playing' | 'betting' | 'handOver' | 'matchOver';
+export type HandPhase = 'dealing' | 'deciding' | 'playing' | 'betting' | 'handOver' | 'matchOver';
 
 export type GamePhase = 'waiting' | 'active' | 'finished';
 
@@ -95,6 +95,8 @@ export type GameAction =
   | { type: 'JOIN_GAME'; seat: Seat; token: string }
   | { type: 'DEAL_HAND' }
   | { type: 'PLAY_CARD'; seat: Seat; cardId: string }
+  | { type: 'PLAY_TEN_HAND'; seat: Seat }
+  | { type: 'RUN_TEN_HAND'; seat: Seat }
   | { type: 'CALL_TRUCO'; seat: Seat }
   | { type: 'RAISE_BET'; seat: Seat }
   | { type: 'ACCEPT_BET'; seat: Seat }
